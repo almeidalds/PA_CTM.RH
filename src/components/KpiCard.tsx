@@ -4,7 +4,7 @@
  */
 
 import React from "react";
-import { LucideIcon, ArrowUpRight } from "lucide-react";
+import { LucideIcon, ArrowUpRight, TrendingUp } from "lucide-react";
 
 type KpiColorType = "green" | "blue" | "orange" | "red" | "gray";
 
@@ -17,7 +17,7 @@ interface KpiCardProps {
   trend?: string;
   subtitle?: string;
   onClick?: () => void;
-  isFirst?: boolean; // Highlight first card with deep slate/blue gradient like the image
+  isFirst?: boolean;
 }
 
 export const KpiCard: React.FC<KpiCardProps> = ({
@@ -36,78 +36,85 @@ export const KpiCard: React.FC<KpiCardProps> = ({
       <div
         id={id}
         onClick={onClick}
-        className={`p-6 rounded-xl bg-gradient-to-br from-yinmn to-cadet text-white shadow-[0_15px_35px_rgba(16,42,67,0.18)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(16,42,67,0.25)] relative overflow-hidden group ${
+        className={`group relative min-h-[148px] overflow-hidden rounded-[18px] bg-gradient-to-br from-[#638ecb] via-[#638ecb] to-[#395886] p-4 text-white shadow-[0_12px_28px_rgba(57,88,134,0.20)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_36px_rgba(57,88,134,0.26)] ${
           onClick ? "cursor-pointer active:scale-[0.98]" : "cursor-default"
         }`}
       >
-        {/* Glow effect */}
-        <div className="absolute -top-10 -right-10 w-24 h-24 bg-white/5 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500" />
-        
-        {/* Top Header Row of Card */}
-        <div className="flex items-center justify-between mb-8">
-          <span className="text-[11px] font-black uppercase tracking-widest text-jordy">
+        <div className="absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/10 blur-2xl transition-transform duration-500 group-hover:scale-125" />
+        <div className="absolute bottom-0 right-0 flex h-20 w-[48%] items-end gap-1.5 px-4 opacity-25" aria-hidden="true">
+          {[34, 58, 44, 72, 52, 82, 64].map((height, index) => (
+            <span key={index} className="flex-1 rounded-t-sm bg-white" style={{ height: `${height}%` }} />
+          ))}
+        </div>
+
+        <div className="relative flex items-start justify-between gap-3">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">
             {title}
           </span>
-          <div className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
-            <ArrowUpRight className="w-4 h-4 text-white" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 transition-colors group-hover:bg-white/25">
+            <Icon className="h-4 w-4 text-white" />
           </div>
         </div>
 
-        {/* Display Value */}
-        <div className="flex items-baseline gap-1 mb-4">
-          <span className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+        <div className="relative mt-3.5 flex items-baseline gap-1">
+          <span className="text-3xl font-bold tracking-[-0.04em]">
             {value}
           </span>
         </div>
 
-        {/* Indicator Pill */}
-        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 border border-white/5 text-[10px] font-bold text-white/95">
-          <div className="w-1.5 h-1.5 rounded-full bg-jordy animate-pulse" />
+        <div className="relative mt-3 inline-flex items-center gap-1.5 rounded-lg bg-white/12 px-2.5 py-1 text-[9px] font-medium text-white/95 backdrop-blur-sm">
+          <TrendingUp className="h-3 w-3" />
           <span>{subtitle || trend}</span>
         </div>
       </div>
     );
   }
 
-  // Normal Card (White, clean minimalist with light borders)
-  const iconColorClasses: Record<KpiColorType, string> = {
-    green: "text-emerald-600 bg-emerald-50",
-    blue: "text-cadet bg-sky-50",
-    orange: "text-amber-600 bg-amber-50",
-    red: "text-rose-600 bg-rose-50",
-    gray: "text-slate-500 bg-slate-50"
+  const cardColorClasses: Record<KpiColorType, string> = {
+    green: "bg-[#eef8f4] border-[#dceee8]",
+    blue: "bg-[#d5deef] border-[#b1c9ef]",
+    orange: "bg-[#fff7ea] border-[#f3e7cf]",
+    red: "bg-[#fff0f3] border-[#f4dce3]",
+    gray: "bg-[#f0f3fa] border-[#d5deef]"
   };
 
-  const selectedColorClass = iconColorClasses[colorType] || iconColorClasses.blue;
+  const iconColorClasses: Record<KpiColorType, string> = {
+    green: "text-emerald-700 bg-white/70",
+    blue: "text-cadet bg-white/70",
+    orange: "text-amber-700 bg-white/70",
+    red: "text-rose-700 bg-white/70",
+    gray: "text-slate-600 bg-slate-100"
+  };
+
+  const selectedIconClass = iconColorClasses[colorType] || iconColorClasses.blue;
+  const selectedCardClass = cardColorClasses[colorType] || cardColorClasses.blue;
 
   return (
     <div
       id={id}
       onClick={onClick}
-      className={`p-6 rounded-xl bg-white border border-sky-100 shadow-[0_10px_30px_rgba(16,42,67,0.04)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(23,105,170,0.10)] relative overflow-hidden group ${
+      className={`group relative min-h-[148px] overflow-hidden rounded-[18px] border p-4 shadow-[0_8px_22px_rgba(57,88,134,0.05)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_13px_28px_rgba(57,88,134,0.11)] ${selectedCardClass} ${
         onClick ? "cursor-pointer active:scale-[0.98]" : "cursor-default"
       }`}
     >
-      {/* Top Header Row of Card */}
-      <div className="flex items-center justify-between mb-8">
-        <span className="text-[11px] font-black uppercase tracking-widest text-slate-400">
+      <div className="flex items-start justify-between gap-3">
+        <span className="max-w-[75%] text-[11px] font-semibold uppercase leading-relaxed tracking-[0.12em] text-slate-500">
           {title}
         </span>
-        <div className="w-8 h-8 rounded-full bg-sky-50 border border-sky-100 group-hover:bg-sky-50 group-hover:border-jordy/50 flex items-center justify-center transition-all">
-          <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-yinmn" />
+        <div className={`flex h-8 w-8 items-center justify-center rounded-lg transition-transform group-hover:scale-105 ${selectedIconClass}`}>
+          <Icon className="h-4 w-4" />
         </div>
       </div>
 
-      {/* Display Value */}
-      <div className="flex items-baseline gap-1 mb-4">
-        <span className="text-3xl sm:text-4xl font-extrabold tracking-tight text-oxford">
+      <div className="mt-3.5 flex items-center justify-between gap-2">
+        <span className="text-3xl font-bold tracking-[-0.04em] text-oxford">
           {value}
         </span>
+        <ArrowUpRight className="h-4 w-4 text-slate-400 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-yinmn" />
       </div>
 
-      {/* Indicator Pill */}
-      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-50 border border-sky-100 text-[10px] font-bold text-slate-500">
-        <div className={`w-1.5 h-1.5 rounded-full ${colorType === "red" ? "bg-red-500 animate-pulse" : "bg-[#22C55E]"}`} />
+      <div className="mt-3 inline-flex items-center gap-1.5 text-[9px] font-medium text-slate-500">
+        <div className={`h-1.5 w-1.5 rounded-full ${colorType === "red" ? "bg-rose-500" : colorType === "orange" ? "bg-amber-500" : "bg-emerald-500"}`} />
         <span>{subtitle || trend}</span>
       </div>
     </div>

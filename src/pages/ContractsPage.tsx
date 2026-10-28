@@ -83,7 +83,7 @@ export const ContractsPage: React.FC<ContractsPageProps> = ({
       return { label: "Médio", color: "text-amber-700 border-amber-200", bg: "bg-amber-50" };
     }
     if (c.diasRestantes <= 90) {
-      return { label: "Baixo", color: "text-blue-700 border-blue-200", bg: "bg-blue-50" };
+      return { label: "Baixo", color: "text-sky-700 border-sky-200", bg: "bg-sky-50" };
     }
     return { label: "Sob Controle", color: "text-emerald-700 border-emerald-200", bg: "bg-emerald-50" };
   };
@@ -157,7 +157,7 @@ export const ContractsPage: React.FC<ContractsPageProps> = ({
   return (
     <div className="space-y-6">
       {/* Title */}
-      <div className="border-b border-sky-100 pb-4">
+      <div className="rounded-[22px] border border-white bg-gradient-to-br from-[#d5deef] to-[#f0f3fa] p-5 shadow-[0_12px_30px_rgba(57,88,134,0.07)]">
         <h2 className="text-lg sm:text-xl font-extrabold text-oxford flex items-center gap-2.5">
           <FileText className="w-5 h-5 text-yinmn" />
           <span>Gestão de Contratos & Renovação</span>
@@ -184,8 +184,8 @@ export const ContractsPage: React.FC<ContractsPageProps> = ({
           <span className="text-lg font-extrabold text-oxford block mt-0.5">{v60}</span>
         </div>
 
-        <div className="p-3 bg-blue-50 rounded-2xl border border-blue-100">
-          <span className="text-[9px] uppercase font-black text-blue-600 tracking-wider block">Vence em 90d</span>
+        <div className="p-3 bg-sky-50 rounded-2xl border border-sky-100">
+          <span className="text-[9px] uppercase font-black text-sky-600 tracking-wider block">Vence em 90d</span>
           <span className="text-lg font-extrabold text-oxford block mt-0.5">{v90}</span>
         </div>
 
@@ -211,7 +211,7 @@ export const ContractsPage: React.FC<ContractsPageProps> = ({
       </div>
 
       {/* Filter bar */}
-      <div className="bg-white p-4 rounded-2xl border border-sky-100 shadow-sm flex flex-col md:flex-row gap-3">
+      <div className="bg-white p-4 rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(57,88,134,0.06)] flex flex-col md:flex-row gap-3">
         <div className="flex-1 relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
@@ -258,7 +258,7 @@ export const ContractsPage: React.FC<ContractsPageProps> = ({
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-sky-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(57,88,134,0.06)] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -406,7 +406,7 @@ export const ContractsPage: React.FC<ContractsPageProps> = ({
       {/* FLYOUT MODAL — EDITAR PARECER / DATA LIMITE */}
       {editingContract && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-sky-100 max-w-md w-full p-6 shadow-2xl relative text-xs">
+          <div className="bg-white rounded-[26px] border border-sky-100 max-w-md w-full p-6 shadow-[0_24px_70px_rgba(57,88,134,0.24)] relative text-xs">
             <h3 className="text-sm font-black uppercase tracking-wider text-oxford mb-4">
               Parecer de Renovação Contratual
             </h3>

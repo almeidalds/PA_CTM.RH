@@ -1,0 +1,85 @@
+{
+  "version": "1.0",
+  "appId": "77d92d29-d7a7-4308-abf0-cbfe49e3bf45",
+  "appDisplayName": "CTM - RH",
+  "region": "prod",
+  "appType": "CodeApp",
+  "environmentId": "cc252a27-2450-e8e0-ba74-da5dfb286011",
+  "description": " ",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "localAppUrl": "http://localhost:3000",
+  "logoPath": "Default",
+  "connectionReferences": {
+    "6aefac50-74a6-4873-933a-08666ba20f01": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_office365users",
+      "displayName": "Office 365 Users",
+      "dataSources": [
+        "office365users"
+      ],
+      "dataSets": {}
+    }
+  },
+  "databaseReferences": {
+    "default.cds": {
+      "dataSources": {
+        "employeerecords": {
+          "entitySetName": "ctmbrasi_employeerecordses",
+          "logicalName": "ctmbrasi_employeerecords",
+          "isHidden": false
+        },
+        "rhcontractrenewals": {
+          "entitySetName": "ctmbrasi_rhcontractrenewalses",
+          "logicalName": "ctmbrasi_rhcontractrenewals",
+          "isHidden": false
+        },
+        "rhemployeelanguages": {
+          "entitySetName": "ctmbrasi_rhemployeelanguageses",
+          "logicalName": "ctmbrasi_rhemployeelanguages",
+          "isHidden": false
+        },
+        "rhlanguages": {
+          "entitySetName": "ctmbrasi_rhlanguageses",
+          "logicalName": "ctmbrasi_rhlanguages",
+          "isHidden": false
+        },
+        "rhpositions": {
+          "entitySetName": "ctmbrasi_rhpositionses",
+          "logicalName": "ctmbrasi_rhpositions",
+          "isHidden": false
+        },
+        "rhshifts": {
+          "entitySetName": "ctmbrasi_rhshiftses",
+          "logicalName": "ctmbrasi_rhshifts",
+          "isHidden": false
+        },
+        "rhsubstitutions": {
+          "entitySetName": "ctmbrasi_rhsubstitutionses",
+          "logicalName": "ctmbrasi_rhsubstitutions",
+          "isHidden": false
+        },
+        "rhtimelineevents": {
+          "entitySetName": "ctmbrasi_rhtimelineeventses",
+          "logicalName": "ctmbrasi_rhtimelineevents",
+          "isHidden": false
+        },
+        "rhvacationperiods": {
+          "entitySetName": "ctmbrasi_rhvacationperiodses",
+          "logicalName": "ctmbrasi_rhvacationperiods",
+          "isHidden": false
+        },
+        "rhzones": {
+          "entitySetName": "ctmbrasi_rhzoneses",
+          "logicalName": "ctmbrasi_rhzones",
+          "isHidden": false
+        },
+        "users": {
+          "entitySetName": "systemusers",
+          "logicalName": "systemuser",
+          "isHidden": false
+        }
+      },
+      "environmentVariableName": ""
+    }
+  }
+}

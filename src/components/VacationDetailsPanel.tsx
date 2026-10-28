@@ -90,7 +90,7 @@ Recomendação: ${recomendacao}`;
       />
 
       {/* Flyout panel */}
-      <div className="relative w-full max-w-lg bg-white h-full shadow-[0_0_50px_rgba(30,46,79,0.15)] flex flex-col z-10 transition-all duration-300 transform">
+      <div className="relative w-full max-w-xl bg-[#f0f3fa] h-full shadow-[0_0_70px_rgba(57,88,134,0.28)] flex flex-col z-10 transition-all duration-300 transform sm:rounded-l-[28px] overflow-hidden">
         {/* Header */}
         <div className="bg-oxford text-white p-6 flex items-center justify-between border-b border-cadet">
           <div className="flex items-center gap-3">

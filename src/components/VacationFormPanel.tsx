@@ -108,7 +108,7 @@ export const VacationFormPanel: React.FC<Props> = ({ employee, allEmployees, onC
   return (
     <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
       <div className="absolute inset-0 bg-oxford/40 backdrop-blur-sm transition-opacity" onClick={onClose} />
-      <div className="relative w-full max-w-lg bg-white h-full shadow-2xl flex flex-col z-10">
+      <div className="relative w-full max-w-xl bg-[#f0f3fa] h-full shadow-[0_0_70px_rgba(57,88,134,0.28)] flex flex-col z-10 sm:rounded-l-[28px] overflow-hidden">
         
         <div className="bg-oxford text-white p-6 flex items-center justify-between border-b border-cadet">
           <div className="flex items-center gap-3">
@@ -225,8 +225,8 @@ export const VacationFormPanel: React.FC<Props> = ({ employee, allEmployees, onC
             </div>
 
             {autoSubst && (
-              <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                <p className="text-[10px] text-blue-700">Uma substituição será criada para o período selecionado e sugestões de substitutos serão apresentadas na aba Substituições.</p>
+              <div className="p-3 bg-sky-50 border border-sky-100 rounded-lg">
+                <p className="text-[10px] text-sky-700">Uma substituição será criada para o período selecionado e sugestões de substitutos serão apresentadas na aba Substituições.</p>
               </div>
             )}
           </div>

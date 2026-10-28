@@ -46,7 +46,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onSave }) 
 
   const renderList = (field: keyof AppSettings, title: string, icon: React.ReactNode) => {
     return (
-      <div className="bg-white p-5 rounded-2xl border border-sky-100 shadow-sm flex flex-col h-full">
+      <div className="bg-white p-5 rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(57,88,134,0.06)] flex flex-col h-full">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 text-yinmn font-extrabold text-sm">
             {icon}
@@ -104,11 +104,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onSave }) 
   };
 
   return (
-    <div className="w-full h-full p-4 lg:p-8 animate-fade-in pb-24">
+    <div className="w-full h-full animate-fade-in pb-20">
       <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="relative overflow-hidden flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-[24px] border border-white bg-gradient-to-br from-[#d5deef] to-[#f0f3fa] p-6 shadow-[0_14px_36px_rgba(57,88,134,0.08)]">
           <div>
-            <h1 className="text-2xl font-extrabold text-[#1F1A2C] tracking-tight flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-oxford tracking-tight flex items-center gap-2">
               <Settings className="w-6 h-6 text-yinmn" />
               Configurações
             </h1>
@@ -126,9 +126,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ settings, onSave }) 
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {renderList("idiomas", "Idiomas de Ensino", <Type className="w-4 h-4" />)}
+          {renderList("idiomas", "Idiomas", <Type className="w-4 h-4" />)}
           {renderList("cargos", "Cargos", <Briefcase className="w-4 h-4" />)}
-          {renderList("zonas", "Zonas de Atuação", <MapPin className="w-4 h-4" />)}
+          {renderList("zonas", "Zonas", <MapPin className="w-4 h-4" />)}
         </div>
       </div>
     </div>

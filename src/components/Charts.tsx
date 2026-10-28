@@ -35,7 +35,7 @@ interface ChartCardProps {
 }
 
 export const ChartCard: React.FC<ChartCardProps> = ({ title, description, children }) => (
-  <div className="bg-white p-6 rounded-[28px] border border-sky-100 shadow-[0_10px_30px_rgba(16,42,67,0.015)] flex flex-col h-full hover:shadow-[0_15px_35px_rgba(16,42,67,0.035)] hover:-translate-y-1 transition-all duration-300">
+  <div className="bg-white p-6 rounded-[22px] border border-sky-100 shadow-[0_12px_32px_rgba(57,88,134,0.055)] flex flex-col h-full hover:shadow-[0_18px_38px_rgba(57,88,134,0.11)] hover:-translate-y-0.5 transition-all duration-300">
     <div className="mb-5">
       <h4 className="text-base font-extrabold text-oxford tracking-tight">{title}</h4>
       <p className="text-[11px] text-slate-400 font-medium mt-1 leading-snug">{description}</p>
@@ -46,7 +46,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({ title, description, childr
   </div>
 );
 
-const COLORS = ["#1769aa", "#3b82f6", "#67b7e8", "#f43f5e", "#f59e0b", "#10b981", "#06b6d4", "#164e78"];
+const COLORS = ["#638ecb", "#8aaee0", "#8aaee0", "#f43f5e", "#f59e0b", "#5aa76c", "#8aaee0", "#395886"];
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -78,8 +78,8 @@ export const IdiomaChart: React.FC<IdiomaChartProps> = ({ data }) => {
     <ResponsiveContainer width="100%" height={240}>
       <BarChart data={data} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
         <XAxis type="number" hide />
-        <YAxis dataKey="name" type="category" width={80} axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#1E293B' }} />
-        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F1F5F9', radius: 4 }} />
+        <YAxis dataKey="name" type="category" width={80} axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#395886' }} />
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F0F3FA', radius: 4 }} />
         <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={20}>
           {data.map((entry, index) => (
             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -107,13 +107,13 @@ export const SaidasMesChart: React.FC<SaidasMesChartProps> = ({ data }) => {
   return (
     <ResponsiveContainer width="100%" height={240}>
       <BarChart data={data} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#D5DEEF" />
         <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: '#64748B' }} dy={10} />
         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: '#64748B' }} />
-        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F8FAFC' }} />
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F0F3FA' }} />
         <Bar dataKey="count" radius={[6, 6, 0, 0]} barSize={32}>
            {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={entry.count > 0 ? "#f43f5e" : "#e2e8f0"} />
+            <Cell key={`cell-${index}`} fill={entry.count > 0 ? "#f43f5e" : "#d5deef"} />
           ))}
         </Bar>
       </BarChart>
@@ -135,7 +135,7 @@ export const ZonaChart: React.FC<ZonaChartProps> = ({ data }) => {
     );
   }
 
-  const pieColors = ["#1769aa", "#3B82F6", "#10B981", "#F59E0B", "#67b7e8", "#64748B"];
+  const pieColors = ["#638ecb", "#8aaee0", "#5aa76c", "#F59E0B", "#8aaee0", "#64748B"];
 
   return (
     <ResponsiveContainer width="100%" height={260}>
@@ -157,7 +157,7 @@ export const ZonaChart: React.FC<ZonaChartProps> = ({ data }) => {
           ))}
         </Pie>
         <Tooltip content={<CustomTooltip />} />
-        <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#1E293B', paddingTop: '20px' }} />
+        <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#395886', paddingTop: '20px' }} />
       </PieChart>
     </ResponsiveContainer>
   );
@@ -177,15 +177,15 @@ export const TurnoChart: React.FC<TurnoChartProps> = ({ data }) => {
     );
   }
 
-  const turnoColors = ["#1769aa", "#67b7e8", "#14b8a6"];
+  const turnoColors = ["#638ecb", "#8aaee0", "#8aaee0"];
 
   return (
     <ResponsiveContainer width="100%" height={240}>
       <BarChart data={data} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#D5DEEF" />
         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748B' }} dy={10} />
         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748B' }} />
-        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F8FAFC' }} />
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F0F3FA' }} />
         <Bar dataKey="count" radius={[6, 6, 0, 0]} barSize={40}>
           {data.map((entry, index) => (
             <Cell key={`cell-${index}`} fill={turnoColors[index % turnoColors.length]} />
@@ -211,8 +211,8 @@ export const StatusChart: React.FC<StatusChartProps> = ({ data }) => {
   }
 
   const statusColors: Record<string, string> = {
-    Ativo: "#1769aa",
-    "A começar": "#3b82f6",
+    Ativo: "#638ecb",
+    "A começar": "#8aaee0",
     Encerrado: "#f43f5e",
   };
 
@@ -236,7 +236,7 @@ export const StatusChart: React.FC<StatusChartProps> = ({ data }) => {
           ))}
         </Pie>
         <Tooltip content={<CustomTooltip />} />
-        <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#1E293B', paddingTop: '20px' }} />
+        <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#395886', paddingTop: '20px' }} />
       </PieChart>
     </ResponsiveContainer>
   );
@@ -259,8 +259,8 @@ export const RiscoChart: React.FC<RiscoChartProps> = ({ data }) => {
   const riscoColors: Record<string, string> = {
     Crítico: "#ef4444",
     Alto: "#f59e0b",
-    Médio: "#3b82f6",
-    Baixo: "#67b7e8",
+    Médio: "#638ecb",
+    Baixo: "#8aaee0",
     "Sem risco": "#10b981",
     "Cadastro incompleto": "#64748b",
   };
@@ -269,8 +269,8 @@ export const RiscoChart: React.FC<RiscoChartProps> = ({ data }) => {
     <ResponsiveContainer width="100%" height={260}>
       <BarChart data={data} layout="vertical" margin={{ top: 0, right: 30, left: 30, bottom: 0 }}>
         <XAxis type="number" hide />
-        <YAxis dataKey="name" type="category" width={110} axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: '#1E293B' }} />
-        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F1F5F9', radius: 4 }} />
+        <YAxis dataKey="name" type="category" width={110} axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: '#395886' }} />
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F0F3FA', radius: 4 }} />
         <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={20}>
           {data.map((entry, index) => (
             <Cell key={`cell-${index}`} fill={riscoColors[entry.name] || COLORS[index % COLORS.length]} />

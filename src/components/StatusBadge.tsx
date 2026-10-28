@@ -22,8 +22,8 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
     bgClass = "bg-rose-50 text-rose-700 border-rose-200";
     dotClass = "bg-[#DC2626]";
   } else if (normalized === "A começar") {
-    bgClass = "bg-blue-50 text-blue-700 border-blue-200";
-    dotClass = "bg-blue-600";
+    bgClass = "bg-sky-50 text-sky-700 border-sky-200";
+    dotClass = "bg-sky-600";
   }
 
   return (

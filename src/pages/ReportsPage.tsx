@@ -7,7 +7,6 @@ import React, { useState, useEffect } from "react";
 import {
   Users,
   ShieldAlert,
-  CalendarDays,
   FileWarning,
   Globe,
   Hourglass,
@@ -133,8 +132,9 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
 
   const proximaSaida = proximasSaidasDisponiveis[0] || null;
 
-  // Encontrar o Funcionário crítico Yuki Tanaka para atalho inteligente no painel "Reminders"
-  const yukiTanakaFuncionário = employees.find((e) => e.nome.includes("Yuki Tanaka")) || proximaSaida;
+  const colaboradorPrioritario = proximasSaidasDisponiveis.find(
+    (employee) => calcularRisco(employee) === "Crítico"
+  ) || proximaSaida;
 
   // Zona com maior concentração de saídas nos próximos 90 dias
   const saídasPorZona90: Record<string, number> = {};
@@ -178,27 +178,13 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
   }));
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-5 font-sans">
       
-      {/* 1. Dashboard header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-extrabold text-oxford tracking-tight flex items-center gap-1">
-            Dashboard<span className="text-jordy">.</span>
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-400 font-semibold mt-1">
-            Planeje, priorize e gerencie os prazos contratuais de Funcionários com facilidade.
-          </p>
-        </div>
-
-
-      </div>
-
       {/* 2. Top 4 Core Metric Cards - modeled exactly after the mockup's top row cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* Total Funcionários Ativos - highlighted slate/blue card */}
         <KpiCard
-          title="Total Funcionários Ativos"
+          title="Funcionários Ativos"
           value={ativos}
           icon={Users}
           colorType="blue"
@@ -264,32 +250,38 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
         {/* Bento Card 1: Project Analytics Chart (Saídas por Mês / Turno) */}
         <DeparturesChart employees={employees} onSelectEmployee={onSelectEmployee} />
 
-        {/* Bento Card 2: Reminders - styled 1-to-1 to the "Meeting with Arc Company" reminder card in the mockup */}
-        <div className="lg:col-span-4 bg-white p-6 rounded-[28px] border border-sky-100 shadow-[0_10px_30px_rgba(16,42,67,0.015)] flex flex-col justify-between min-h-[300px]">
+        <div className="lg:col-span-4 bg-gradient-to-br from-[#f2efff] to-[#fff4f8] p-6 rounded-[22px] border border-[#e7e0fb] shadow-[0_12px_32px_rgba(72,77,130,0.07)] flex flex-col justify-between min-h-[300px]">
           <div>
-            <span className="text-[10px] font-black text-yinmn uppercase tracking-widest block mb-4">
-              Ações Recomendadas
+            <span className="text-[10px] font-semibold text-yinmn uppercase tracking-[0.14em] block mb-4">
+              Prioridade do dia
             </span>
-            <h4 className="text-base font-extrabold text-oxford leading-snug">
-              Renovação Contratual Crítica
+            <h4 className="text-base font-bold text-oxford leading-snug">
+              {colaboradorPrioritario ? "Revisar renovação contratual" : "Nenhuma ação urgente"}
             </h4>
-            <p className="text-[11px] text-slate-400 font-semibold mt-1">
-              Yuki Tanaka (Língua Japonesa)
+            <p className="text-[11px] text-slate-500 font-medium mt-1">
+              {colaboradorPrioritario
+                ? `${colaboradorPrioritario.nome} · ${colaboradorPrioritario.cargo || "Cargo não informado"}`
+                : "Não há contratos com término futuro cadastrado."}
             </p>
-            <div className="mt-4 bg-sky-50 border border-sky-200 p-3 rounded-2xl">
-              <span className="text-[9px] text-slate-400 uppercase font-black block tracking-wider">Janela de Ação</span>
-              <p className="text-xs font-bold text-rose-600 mt-1">Vencimento iminente</p>
-              <p className="text-[10px] text-slate-500 font-medium mt-0.5">Faltam apenas 12 dias</p>
+            <div className="mt-4 bg-white/75 border border-white p-3 rounded-xl shadow-sm">
+              <span className="text-[9px] text-slate-400 uppercase font-semibold block tracking-wider">Janela de ação</span>
+              <p className={`text-xs font-semibold mt-1 ${colaboradorPrioritario && (colaboradorPrioritario.dias ?? 999) <= 15 ? "text-rose-600" : "text-cadet"}`}>
+                {colaboradorPrioritario ? "Término de contrato" : "Situação controlada"}
+              </p>
+              <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                {colaboradorPrioritario ? `${colaboradorPrioritario.dias} dias restantes` : "Continue acompanhando os indicadores"}
+              </p>
             </div>
           </div>
 
           <button
             onClick={() => {
-              if (yukiTanakaFuncionário) onSelectEmployee(yukiTanakaFuncionário);
+              if (colaboradorPrioritario) onSelectEmployee(colaboradorPrioritario);
             }}
-            className="w-full py-3 bg-gradient-to-br from-yinmn to-oxford hover:opacity-95 text-white font-black text-[11px] uppercase tracking-wider rounded-2xl transition-all active:scale-[0.98] shadow-md cursor-pointer"
+            disabled={!colaboradorPrioritario}
+            className="w-full py-3 bg-yinmn hover:bg-cadet disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold text-[11px] rounded-xl transition-all active:scale-[0.98] shadow-sm cursor-pointer"
           >
-            Iniciar Renovação
+            {colaboradorPrioritario ? "Ver detalhes do contrato" : "Sem pendências urgentes"}
           </button>
         </div>
 
@@ -299,10 +291,10 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Bento Card 4: Team Member Analytics (Funcionários Monitorados) */}
-        <div className="lg:col-span-8 bg-white p-6 rounded-[28px] border border-sky-100 shadow-[0_10px_30px_rgba(16,42,67,0.015)] flex flex-col justify-between">
+        <div className="lg:col-span-8 bg-white p-6 rounded-[22px] border border-sky-100 shadow-[0_12px_32px_rgba(72,77,130,0.055)] flex flex-col justify-between">
           <div>
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">
-              Status de Funcionários Monitorados
+              Status de Funcionários
             </span>
             
             <div className="space-y-3.5">
@@ -363,15 +355,11 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
         totalCount={total}
       />
       {/* 5. Clean chronological output list of contract endings */}
-      <div className="bg-white p-6 rounded-[28px] border border-sky-100 shadow-[0_10px_30px_rgba(16,42,67,0.015)]">
+      <div className="bg-white p-6 rounded-[22px] border border-sky-100 shadow-[0_12px_32px_rgba(72,77,130,0.055)]">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
-            <h4 className="text-base font-extrabold text-oxford">Lista de Encerramentos</h4>
-            <p className="text-xs text-slate-400 font-medium mt-0.5">Próximos términos de contratos</p>
+            <h4 className="text-base font-extrabold text-oxford">Próximos términos de contratos</h4>
           </div>
-          <span className="text-[9px] font-black text-rose-600 bg-rose-50 border border-rose-100 px-3 py-1.5 rounded-full uppercase tracking-wider w-max">
-            Acompanhamento Legal Requerido
-          </span>
         </div>
 
         <div className="overflow-x-auto no-scrollbar -mx-6 px-6">

@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { RhEmployee, VacationFilters, VacationPeriod } from "../types/rh";
 import { formatarDataBR, getToday, formatarDataCurta } from "../utils/dateUtils";
+import { TURNOS_DISPONIVEIS } from "../constants/turnos";
 import {
   calcularTempoTrabalho,
   calcularStatusFerias,
@@ -242,12 +243,8 @@ export const VacationsPage: React.FC<VacationsPageProps> = (props) => {
   return (
     <div className="space-y-6">
       {/* Header da Página */}
-      <div className="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#d5deef] to-[#f0f3fa] p-6 rounded-[24px] border border-white shadow-[0_14px_36px_rgba(57,88,134,0.08)] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-yinmn mb-1.5 font-extrabold text-xs">
-            <Plane className="w-4.5 h-4.5 text-yinmn" />
-            <span className="uppercase tracking-widest">Módulo Operacional CTM</span>
-          </div>
           <h1 className="text-lg sm:text-xl font-extrabold text-oxford tracking-tight">
             Controle de Férias dos Instrutores
           </h1>
@@ -278,7 +275,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = (props) => {
           className={`p-4 rounded-2xl border transition-all duration-350 cursor-pointer hover:-translate-y-0.5 active:scale-95 ${
             filtros.somenteCriticos 
               ? "bg-rose-50/70 border-rose-300 ring-2 ring-rose-200 shadow-sm" 
-              : "bg-white border-sky-100 shadow-sm hover:shadow-md"
+              : "bg-[#fff0f3] border-[#f4dce3] shadow-[0_10px_24px_rgba(57,88,134,0.05)] hover:shadow-md"
           }`}
         >
           <div className="flex items-center justify-between mb-2">
@@ -300,7 +297,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = (props) => {
           className={`p-4 rounded-2xl border transition-all duration-350 cursor-pointer hover:-translate-y-0.5 active:scale-95 ${
             filtros.somenteAptos 
               ? "bg-amber-50/70 border-amber-300 ring-2 ring-amber-200 shadow-sm" 
-              : "bg-white border-sky-100 shadow-sm hover:shadow-md"
+              : "bg-[#fff7ea] border-[#f3e7cf] shadow-[0_10px_24px_rgba(57,88,134,0.05)] hover:shadow-md"
           }`}
         >
           <div className="flex items-center justify-between mb-2">
@@ -319,7 +316,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = (props) => {
             resetFilters();
             handleFilterChange("statusFerias", "Férias marcadas");
           }}
-          className="bg-white p-4 rounded-2xl border border-sky-100 shadow-sm transition-all duration-350 cursor-pointer hover:-translate-y-0.5 hover:shadow-md active:scale-95"
+          className="bg-[#d5deef] p-4 rounded-[20px] border border-[#b1c9ef] shadow-[0_10px_24px_rgba(57,88,134,0.05)] transition-all duration-350 cursor-pointer hover:-translate-y-0.5 hover:shadow-md active:scale-95"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] uppercase font-black tracking-wider text-yinmn">Programadas</span>
@@ -337,7 +334,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = (props) => {
             resetFilters();
             handleFilterChange("statusFerias", "Férias em andamento");
           }}
-          className="bg-white p-4 rounded-2xl border border-sky-100 shadow-sm transition-all duration-350 cursor-pointer hover:-translate-y-0.5 hover:shadow-md active:scale-95"
+          className="bg-[#d5deef] p-4 rounded-[20px] border border-[#b1c9ef] shadow-[0_10px_24px_rgba(57,88,134,0.05)] transition-all duration-350 cursor-pointer hover:-translate-y-0.5 hover:shadow-md active:scale-95"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] uppercase font-black tracking-wider text-yinmn">Em Andamento</span>
@@ -355,7 +352,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = (props) => {
             resetFilters();
             handleFilterChange("statusFerias", "Férias concluídas");
           }}
-          className="bg-white p-4 rounded-2xl border border-sky-100 shadow-sm transition-all duration-350 cursor-pointer hover:-translate-y-0.5 hover:shadow-md active:scale-95"
+          className="bg-[#eef8f4] p-4 rounded-[20px] border border-[#dceee8] shadow-[0_10px_24px_rgba(57,88,134,0.05)] transition-all duration-350 cursor-pointer hover:-translate-y-0.5 hover:shadow-md active:scale-95"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] uppercase font-black tracking-wider text-emerald-600">Concluídas</span>
@@ -368,7 +365,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = (props) => {
         </div>
 
         {/* KPI 6: Dias Vendidos */}
-        <div className="bg-white p-4 rounded-2xl border border-sky-100 shadow-sm">
+        <div className="bg-[#fff7ea] p-4 rounded-[20px] border border-[#f3e7cf] shadow-[0_10px_24px_rgba(57,88,134,0.05)]">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] uppercase font-black tracking-wider text-amber-700">Abonos (Dias Vendidos)</span>
             <div className="p-1.5 rounded-xl bg-amber-50 text-amber-700">
@@ -385,7 +382,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = (props) => {
             resetFilters();
             handleFilterChange("periodoAdmissao", "1ano");
           }}
-          className="bg-white p-4 rounded-2xl border border-sky-100 shadow-sm transition-all duration-350 cursor-pointer hover:-translate-y-0.5 hover:shadow-md active:scale-95"
+          className="bg-[#f0f3fa] p-4 rounded-[20px] border border-[#d5deef] shadow-[0_10px_24px_rgba(57,88,134,0.05)] transition-all duration-350 cursor-pointer hover:-translate-y-0.5 hover:shadow-md active:scale-95"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] uppercase font-black tracking-wider text-slate-500">Sem Férias &gt; 1 Ano</span>
@@ -403,7 +400,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = (props) => {
             resetFilters();
             handleFilterChange("periodoAdmissao", "1ano6meses");
           }}
-          className="bg-white p-4 rounded-2xl border border-sky-100 shadow-sm transition-all duration-350 cursor-pointer hover:-translate-y-0.5 hover:shadow-md active:scale-95"
+          className="bg-[#fff0f3] p-4 rounded-[20px] border border-[#f4dce3] shadow-[0_10px_24px_rgba(57,88,134,0.05)] transition-all duration-350 cursor-pointer hover:-translate-y-0.5 hover:shadow-md active:scale-95"
         >
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] uppercase font-black tracking-wider text-rose-700">Sem Férias &gt; 1.5 Anos</span>
@@ -418,7 +415,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = (props) => {
       </div>
 
       {/* Seção de Alertas Automáticos */}
-      <div className="bg-white p-6 rounded-2xl border border-sky-100 shadow-sm space-y-4">
+      <div className="bg-white p-6 rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(57,88,134,0.06)] space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2.5">
           <div className="flex items-center gap-2.5">
             <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
@@ -501,7 +498,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = (props) => {
       </div>
 
       {/* Bloco de Filtros Avançados */}
-      <div className="bg-white p-4 rounded-2xl border border-sky-100 shadow-sm space-y-4">
+      <div className="bg-white p-4 rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(57,88,134,0.06)] space-y-4">
         <div className="flex flex-col sm:flex-row items-center gap-3">
           {/* Busca Principal */}
           <div className="relative flex-1 w-full">
@@ -572,9 +569,9 @@ export const VacationsPage: React.FC<VacationsPageProps> = (props) => {
                 className="w-full rounded-xl border border-sky-100 p-2 text-xs outline-none bg-white text-slate-600 font-semibold focus:border-jordy cursor-pointer"
               >
                 <option value="">Todos os Turnos</option>
-                <option value="Manhã">Manhã</option>
-                <option value="Tarde">Tarde</option>
-                <option value="Noite">Noite</option>
+                {TURNOS_DISPONIVEIS.map((turno) => (
+                  <option key={turno} value={turno}>{turno}</option>
+                ))}
               </select>
             </div>
 
@@ -675,7 +672,7 @@ export const VacationsPage: React.FC<VacationsPageProps> = (props) => {
       </div>
 
       {/* Tabela de Instrutores */}
-      <div className="bg-white rounded-2xl border border-sky-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(57,88,134,0.06)] overflow-hidden">
         
         {/* Título da Tabela */}
         <div className="p-5 border-b border-sky-100 flex items-center justify-between bg-sky-50/50">

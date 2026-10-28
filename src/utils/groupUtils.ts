@@ -200,7 +200,7 @@ export function gerarRecomendacoes(funcionarios: RhEmployee[]) {
     recs.push({
       id: "rec-termino",
       title: "Corrigir cadastros sem data de término",
-      text: `Existem ${resumo.semDataTermino} funcionários sem data de término real cadastrada. Isso impede que os relatórios de saídas futuras e riscos contratuais sejam 100% precisos.`,
+      text: `Existem ${resumo.semDataTermino} funcionários sem data de término real cadastrada. Isso impede que os indicadores de saídas futuras e riscos contratuais sejam 100% precisos.`,
       severity: "crítica",
     });
   }

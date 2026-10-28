@@ -6,7 +6,6 @@
 import React, { useState, useRef, useId } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  FileText,
   RotateCcw,
   AlertTriangle,
   FolderSync,
@@ -21,7 +20,6 @@ interface FloatingActionBarProps {
   systemAlertCount: number;
   pendingCount: number;
   criticalVacationCount: number;
-  onGenerateReportClick: () => void;
   onResetData: () => void;
   activeTab: TabId;
   setActiveTab: (tab: TabId) => void;
@@ -34,7 +32,6 @@ export const FloatingActionBar: React.FC<FloatingActionBarProps> = ({
   systemAlertCount,
   pendingCount,
   criticalVacationCount,
-  onGenerateReportClick,
   onResetData,
   activeTab,
   setActiveTab,
@@ -100,7 +97,7 @@ export const FloatingActionBar: React.FC<FloatingActionBarProps> = ({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 15 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="absolute bottom-[4.5rem] right-0 z-40 w-80 max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-7rem)] overflow-y-auto bg-white rounded-2xl border border-sky-100 shadow-[0_12px_40px_rgba(16,42,67,0.12)] p-5 flex flex-col gap-4"
+              className="absolute bottom-[4.5rem] right-0 z-40 w-80 max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-7rem)] overflow-y-auto bg-white rounded-[22px] border border-sky-100 shadow-[0_16px_44px_rgba(57,88,134,0.16)] p-5 flex flex-col gap-4"
             >
               {/* Header */}
               <div className="flex items-center justify-between border-b border-sky-100 pb-3">
@@ -215,24 +212,13 @@ export const FloatingActionBar: React.FC<FloatingActionBarProps> = ({
               {/* Global Utility Actions */}
               <div className="space-y-1.5 pt-1.5 border-t border-sky-100">
                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block px-1">
-                  Ações de Escrita e Banco
+                  Ações do sistema
                 </span>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => {
-                      onGenerateReportClick();
-                      setIsOpen(false);
-                    }}
-                    className="flex flex-col items-center justify-center p-3 rounded-2xl bg-sky-50/50 hover:bg-sky-50 border border-sky-100 transition-all text-center gap-1.5 group active:scale-95 cursor-pointer"
-                  >
-                    <FileText className="w-4 h-4 text-yinmn group-hover:scale-110 transition-transform" />
-                    <span className="text-[10px] font-black text-slate-700 uppercase tracking-wider block">Relatórios</span>
-                  </button>
-
+                <div>
                   <button
                     onClick={handleReset}
-                    className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#FFF9F9] hover:bg-rose-50 border border-rose-100/30 transition-all text-center gap-1.5 group active:scale-95 cursor-pointer"
+                    className="flex w-full items-center justify-center p-3 rounded-xl bg-[#FFF9F9] hover:bg-rose-50 border border-rose-100/30 transition-all text-center gap-2 group active:scale-[0.98] cursor-pointer"
                   >
                     <RotateCcw className="w-4 h-4 text-rose-500 group-hover:scale-110 transition-transform" />
                     <span className="text-[10px] font-black text-slate-700 uppercase tracking-wider block">Resetar Dados</span>
@@ -253,7 +239,7 @@ export const FloatingActionBar: React.FC<FloatingActionBarProps> = ({
         aria-controls={isOpen ? panelId : undefined}
         aria-label={`${isOpen ? "Fechar" : "Abrir"} notificações${totalAlerts > 0 ? `: ${totalAlerts} ocorrências` : ": sem pendências"}`}
         title={isOpen ? "Fechar notificações" : "Abrir notificações"}
-        className={`relative z-40 flex h-14 items-center gap-3 rounded-2xl border px-3 shadow-[0_4px_18px_rgba(16,42,67,0.10)] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yinmn focus-visible:ring-offset-2 motion-reduce:transition-none cursor-pointer ${
+        className={`relative z-40 flex h-14 items-center gap-3 rounded-2xl border px-3 shadow-[0_10px_26px_rgba(57,88,134,0.14)] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yinmn focus-visible:ring-offset-2 motion-reduce:transition-none cursor-pointer ${
           isOpen
             ? "border-yinmn bg-yinmn text-white"
             : "border-sky-100 bg-white text-oxford hover:border-sky-200 hover:bg-sky-50"

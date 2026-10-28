@@ -30,6 +30,7 @@ import { RiskBadge } from "../components/RiskBadge";
 import { calcularStatusFerias } from "../utils/vacationUtils";
 import { obterSubstituicoes } from "../services/additionalDataSource";
 import { gerarDatasNoIntervalo } from "../utils/absenceUtils";
+import { TURNOS_DISPONIVEIS } from "../constants/turnos";
 
 interface RisksPageProps {
   employees: RhEmployee[];
@@ -225,7 +226,6 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
   };
 
   const IDIOMAS = ["Inglês", "Espanhol", "Francês", "Japonês", "Alemão", "Mandarim", "Italiano", "Português"];
-  const TURNOS = ["Manhã", "Tarde", "Noite"];
   const ZONAS = ["Zona Sul", "Zona Norte", "Zona Leste", "Zona Oeste", "Administrativo"];
   const MESES = [
     { label: "Julho/26", key: "2026-07" },
@@ -285,7 +285,7 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
   return (
     <div className="space-y-6">
       {/* Page Title & Sub-tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-sky-100 pb-4 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-[22px] border border-white bg-gradient-to-br from-[#d5deef] to-[#f0f3fa] p-5 shadow-[0_12px_30px_rgba(57,88,134,0.07)] gap-4">
         <div>
           <h2 className="text-lg sm:text-xl font-extrabold text-oxford flex items-center gap-2.5">
             <AlertTriangle className="w-5 h-5 text-rose-500" />
@@ -332,7 +332,7 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
                 return (
                   <div
                     key={alert.id}
-                    className={`p-5 bg-white rounded-2xl border border-sky-100 shadow-[0_4px_20px_-4px_rgba(23,105,170,0.04)] hover:shadow-[0_12px_24px_-8px_rgba(23,105,170,0.07)] hover:-translate-y-0.5 transition-all duration-300 flex gap-4 ${
+                    className={`p-5 bg-white rounded-[22px] border border-sky-100 shadow-[0_10px_26px_rgba(57,88,134,0.05)] hover:shadow-[0_16px_34px_rgba(57,88,134,0.10)] hover:-translate-y-0.5 transition-all duration-300 flex gap-4 ${
                       alert.severity === "Crítico"
                         ? "border-l-4 border-l-rose-500"
                         : alert.severity === "Alto"
@@ -384,7 +384,7 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
 
           {/* Right Side */}
           <div className="space-y-6">
-            <div className="bg-white p-5 rounded-2xl border border-sky-100 shadow-[0_4px_20px_-4px_rgba(23,105,170,0.04)] space-y-4">
+            <div className="bg-white p-5 rounded-[22px] border border-sky-100 shadow-[0_10px_26px_rgba(57,88,134,0.05)] space-y-4">
               <div>
                 <h4 className="text-xs font-black uppercase tracking-wider text-oxford">Contratos Críticos & Altos</h4>
                 <p className="text-[10px] text-slate-400 mt-0.5 font-semibold">Regularização contratual imediata</p>
@@ -478,7 +478,7 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
                 <div className="min-w-[600px] text-xs">
                   <div className="grid grid-cols-4 border-b border-sky-100 pb-3 text-[10px] uppercase font-black text-slate-400 tracking-wider">
                     <div>Idioma de Ensino</div>
-                    {TURNOS.map((t) => (
+                    {TURNOS_DISPONIVEIS.map((t) => (
                       <div key={t} className="text-center">{t}</div>
                     ))}
                   </div>
@@ -487,12 +487,12 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
                     {IDIOMAS.map((idioma) => (
                       <div key={idioma} className="grid grid-cols-4 py-3.5 items-center">
                         <div className="font-extrabold text-oxford">{idioma}</div>
-                        {TURNOS.map((turno) => {
+                        {TURNOS_DISPONIVEIS.map((turno) => {
                           const met = calcularMetricasCelula({ idioma, turno });
                           return (
                             <div key={turno} className="px-2">
                               <div
-                                onClick={() => setSelectedCellInfo({ title: `${idioma} • Turno ${turno}`, ...met })}
+                                onClick={() => setSelectedCellInfo({ title: `${idioma} • ${turno}`, ...met })}
                                 className={`py-3 text-center rounded-xl cursor-pointer transition-all hover:scale-105 hover:shadow-sm font-extrabold text-xs ${getHeatmapColor(met.nivel)}`}
                               >
                                 {met.activeCount} Act
@@ -544,7 +544,7 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
                 <div className="min-w-[600px] text-xs">
                   <div className="grid grid-cols-4 border-b border-sky-100 pb-3 text-[10px] uppercase font-black text-slate-400 tracking-wider">
                     <div>Região / Campus</div>
-                    {TURNOS.map((t) => (
+                    {TURNOS_DISPONIVEIS.map((t) => (
                       <div key={t} className="text-center">{t}</div>
                     ))}
                   </div>
@@ -553,12 +553,12 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
                     {ZONAS.map((zona) => (
                       <div key={zona} className="grid grid-cols-4 py-3.5 items-center">
                         <div className="font-extrabold text-oxford">{zona}</div>
-                        {TURNOS.map((turno) => {
+                        {TURNOS_DISPONIVEIS.map((turno) => {
                           const met = calcularMetricasCelula({ zona, turno });
                           return (
                             <div key={turno} className="px-2">
                               <div
-                                onClick={() => setSelectedCellInfo({ title: `${zona} • Turno ${turno}`, ...met })}
+                                onClick={() => setSelectedCellInfo({ title: `${zona} • ${turno}`, ...met })}
                                 className={`py-3 text-center rounded-xl cursor-pointer transition-all hover:scale-105 hover:shadow-sm font-extrabold text-xs ${getHeatmapColor(met.nivel)}`}
                               >
                                 {met.activeCount} Act

@@ -233,7 +233,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
       case "Média":
         return "bg-amber-100 text-amber-700 border border-amber-200 font-semibold";
       default:
-        return "bg-blue-100 text-blue-700 border border-blue-200 font-medium";
+        return "bg-sky-100 text-sky-700 border border-sky-200 font-medium";
     }
   };
 
@@ -242,7 +242,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
       case "Risco":
         return "text-red-600";
       case "Contrato":
-        return "text-blue-600";
+        return "text-sky-600";
       case "Férias":
         return "text-yinmn";
       case "Substituição":
@@ -279,8 +279,8 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
   return (
     <div className="space-y-6">
       {/* Page Title */}
-      <div className="border-b border-sky-100 pb-4">
-        <h2 className="text-lg sm:text-xl font-extrabold text-[#1F1A2C] flex items-center gap-2.5">
+      <div className="rounded-[22px] border border-white bg-gradient-to-br from-[#d5deef] to-[#f0f3fa] p-5 shadow-[0_12px_30px_rgba(57,88,134,0.07)]">
+        <h2 className="text-lg sm:text-xl font-bold text-oxford flex items-center gap-2.5">
           <Bell className="w-5 h-5 text-yinmn animate-swing" />
           <span>Central de Alertas Operacionais Inteligentes</span>
         </h2>
@@ -325,7 +325,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
       </div>
 
       {/* Filter and search actions */}
-      <div className="bg-white p-4 rounded-2xl border border-sky-100 shadow-sm flex flex-col lg:flex-row gap-3">
+      <div className="bg-white p-4 rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(57,88,134,0.06)] flex flex-col lg:flex-row gap-3">
         <div className="flex-1 relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
@@ -397,7 +397,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
                   ? "bg-red-50/20 border-red-100 hover:border-red-200"
                   : alert.gravidade === "Alta"
                   ? "bg-orange-50/20 border-orange-100 hover:border-orange-200"
-                  : "bg-[#FAF9FF] border-sky-100 hover:border-sky-200"
+                  : "bg-sky-50/50 border-sky-100 hover:border-sky-200"
               }`}
             >
               {/* Alert Content */}
@@ -426,7 +426,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
                 {/* Body details */}
                 <div className="space-y-1 min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap text-xs">
-                    <span className="font-extrabold text-[#1F1A2C] text-sm">{alert.tipo}</span>
+                    <span className="font-bold text-oxford text-sm">{alert.tipo}</span>
                     <span className={`text-[9px] uppercase font-black px-2 py-0.5 rounded-full ${getSeverityBadge(alert.gravidade)}`}>
                       {alert.gravidade}
                     </span>
@@ -479,7 +479,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
                     onChange={(e) => handleStatusChange(alert.alertId, e.target.value)}
                     className={`text-xs font-bold px-3 py-1.5 rounded-lg border appearance-none cursor-pointer ${
                       status === "Resolvido" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                      status === "Em andamento" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                      status === "Em andamento" ? "bg-sky-50 text-sky-700 border-sky-200" :
                       status === "Em análise" ? "bg-amber-50 text-amber-700 border-amber-200" :
                       status === "Ignorado" ? "bg-slate-100 text-slate-500 border-slate-200" :
                       "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
@@ -498,9 +498,9 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
         })}
 
         {filteredAlerts.length === 0 && (
-          <div className="bg-white rounded-3xl p-10 text-center border border-sky-100/50 shadow-sm text-slate-400 font-semibold">
+          <div className="bg-white rounded-[26px] p-10 text-center border border-sky-100/50 shadow-[0_12px_30px_rgba(57,88,134,0.06)] text-slate-400 font-semibold">
             <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto mb-2" />
-            <h3 className="text-sm font-black text-[#1F1A2C]">Excelente! Central Totalmente Limpa</h3>
+            <h3 className="text-sm font-black text-oxford">Excelente! Central Totalmente Limpa</h3>
             <p className="text-xs text-slate-400 font-medium mt-1">Todos os riscos operacionais, inconsistências e férias vencidas estão devidamente monitorados.</p>
           </div>
         )}

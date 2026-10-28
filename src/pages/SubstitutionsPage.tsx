@@ -28,6 +28,7 @@ import { obterSubstituicoes, salvarSubstituicoes } from "../services/additionalD
 import { calcularStatusFerias } from "../utils/vacationUtils";
 import { SubstitutionSummaryCard } from "../components/SummaryCard";
 import { validarLimiteAusencias,  gerarDatasNoIntervalo } from "../utils/absenceUtils";
+import { TURNOS_DISPONIVEIS } from "../constants/turnos";
 
 interface SubstitutionsPageProps {
   appSettings: import("../types/rh").AppSettings;
@@ -86,7 +87,7 @@ export const SubstitutionsPage: React.FC<SubstitutionsPageProps> = ({
     }
     
     if (sub.substituto && sub.substituto.trim() !== "") {
-      return { label: "Baixo", color: "text-blue-700 border-blue-200", bg: "bg-blue-50" };
+      return { label: "Baixo", color: "text-sky-700 border-sky-200", bg: "bg-sky-50" };
     }
 
     const diasParaInicio = calcularDiasRestantes(sub.dataInicio);
@@ -314,9 +315,9 @@ export const SubstitutionsPage: React.FC<SubstitutionsPageProps> = ({
   return (
     <div className="space-y-6">
       {/* Page Title & Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-sky-100 pb-4 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-[22px] border border-white bg-gradient-to-br from-[#d5deef] to-[#f0f3fa] p-5 shadow-[0_12px_30px_rgba(57,88,134,0.07)] gap-4">
         <div>
-          <h2 className="text-lg sm:text-xl font-extrabold text-[#1F1A2C] flex items-center gap-2.5">
+          <h2 className="text-lg sm:text-xl font-bold text-oxford flex items-center gap-2.5">
             <RefreshCw className="w-5 h-5 text-yinmn" />
             <span>Controle de Substituições Funcionários</span>
           </h2>
@@ -329,7 +330,7 @@ export const SubstitutionsPage: React.FC<SubstitutionsPageProps> = ({
             resetForm();
             setIsFormOpen(true);
           }}
-          className="bg-yinmn hover:bg-yinmn text-white text-xs font-black py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-blue-200 transition-all select-none"
+          className="bg-yinmn hover:bg-yinmn text-white text-xs font-black py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-sky-200 transition-all select-none"
         >
           <Plus className="w-4 h-4" />
           <span>Registrar Afastamento</span>
@@ -348,9 +349,9 @@ export const SubstitutionsPage: React.FC<SubstitutionsPageProps> = ({
           <span className="text-lg font-extrabold text-rose-900 block mt-0.5">{totalSemResponsavel}</span>
         </div>
 
-        <div className="p-3.5 bg-blue-50 rounded-2xl border border-blue-100">
-          <span className="text-[9px] uppercase font-black text-blue-600 tracking-wider block">Em Andamento</span>
-          <span className="text-lg font-extrabold text-blue-900 block mt-0.5">{totalEmAndamento}</span>
+        <div className="p-3.5 bg-sky-50 rounded-2xl border border-sky-100">
+          <span className="text-[9px] uppercase font-black text-sky-600 tracking-wider block">Em Andamento</span>
+          <span className="text-lg font-extrabold text-sky-900 block mt-0.5">{totalEmAndamento}</span>
         </div>
 
         <div className="p-3.5 bg-sky-50 rounded-2xl border border-sky-100">
@@ -375,7 +376,7 @@ export const SubstitutionsPage: React.FC<SubstitutionsPageProps> = ({
       </div>
 
       {/* Filtros e Busca */}
-      <div className="bg-white p-4 rounded-2xl border border-sky-100 shadow-sm flex flex-col md:flex-row gap-3">
+      <div className="bg-white p-4 rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(57,88,134,0.06)] flex flex-col md:flex-row gap-3">
         <div className="flex-1 relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
@@ -422,9 +423,9 @@ export const SubstitutionsPage: React.FC<SubstitutionsPageProps> = ({
 
       {/* Cards de Substituições - Responsive Card Grid */}
       {filteredSubs.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-sky-100 shadow-sm p-12 text-center">
+        <div className="bg-white rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(57,88,134,0.06)] p-12 text-center">
           <AlertTriangle className="w-10 h-10 text-slate-300 mx-auto mb-3 animate-bounce" />
-          <h3 className="text-base font-extrabold text-[#1F1A2C] mb-1">Nenhum afastamento ou substituição</h3>
+          <h3 className="text-base font-bold text-oxford mb-1">Nenhum afastamento ou substituição</h3>
           <p className="text-xs text-slate-400 max-w-sm mx-auto">
             Tente reajustar seus filtros avançados ou pesquise por outro termo de busca para localizar registros.
           </p>
@@ -464,8 +465,8 @@ export const SubstitutionsPage: React.FC<SubstitutionsPageProps> = ({
       {/* FLYOUT MODAL 1 - FORMULÁRIO DE AFASTAMENTO */}
       {isFormOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-sky-100 max-w-lg w-full p-6 shadow-2xl relative">
-            <h3 className="text-sm font-black uppercase tracking-wider text-[#1F1A2C] mb-4">
+          <div className="bg-white rounded-[26px] border border-sky-100 max-w-lg w-full p-6 shadow-[0_24px_70px_rgba(57,88,134,0.24)] relative">
+            <h3 className="text-sm font-black uppercase tracking-wider text-oxford mb-4">
               Registrar Ausência / Afastamento Temporário
             </h3>
             
@@ -565,9 +566,9 @@ export const SubstitutionsPage: React.FC<SubstitutionsPageProps> = ({
                     className="w-full p-2.5 bg-slate-50 border border-sky-100 rounded-xl font-semibold"
                   >
                     <option value="">Selecione o turno...</option>
-                    <option value="Manhã">Manhã</option>
-                    <option value="Tarde">Tarde</option>
-                    <option value="Noite">Noite</option>
+                    {TURNOS_DISPONIVEIS.map((turno) => (
+                      <option key={turno} value={turno}>{turno}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -634,13 +635,13 @@ export const SubstitutionsPage: React.FC<SubstitutionsPageProps> = ({
       {/* FLYOUT MODAL 2 - RECOMENDADOR DE SUBSTITUTOS INTELIGENTES */}
       {isRecommenderOpen && activeSubForRecommendation && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-sky-100 max-w-2xl w-full p-6 shadow-2xl relative flex flex-col max-h-[90vh]">
+          <div className="bg-white rounded-[26px] border border-sky-100 max-w-2xl w-full p-6 shadow-[0_24px_70px_rgba(57,88,134,0.24)] relative flex flex-col max-h-[90vh]">
             {/* Modal Header */}
             <div className="border-b border-sky-100 pb-3 mb-4">
               <span className="text-[10px] uppercase font-black text-yinmn tracking-wider">
                 Motor de Sugestão de Cobertura
               </span>
-              <h3 className="text-sm font-black text-[#1F1A2C] mt-1">
+              <h3 className="text-sm font-black text-oxford mt-1">
                 Recomendando Substituto para: <span className="text-yinmn">{activeSubForRecommendation.instrutorAusente}</span>
               </h3>
               <p className="text-[11px] text-slate-400 font-semibold mt-1">
@@ -664,7 +665,7 @@ export const SubstitutionsPage: React.FC<SubstitutionsPageProps> = ({
                     {/* Candidate Details */}
                     <div className="space-y-1 min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-black text-[#1F1A2C]">{item.emp.nome}</span>
+                        <span className="text-xs font-black text-oxford">{item.emp.nome}</span>
                         <span className="text-[9px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">
                           {item.emp.cargo}
                         </span>
@@ -733,7 +734,7 @@ export const SubstitutionsPage: React.FC<SubstitutionsPageProps> = ({
                         item.conflitoFerias || item.conflitoSub
                           ? "bg-slate-100 text-slate-400 cursor-not-allowed"
                           : isTopMatch
-                          ? "bg-yinmn hover:bg-yinmn text-white shadow-md shadow-blue-200"
+                          ? "bg-yinmn hover:bg-yinmn text-white shadow-md shadow-sky-200"
                           : "bg-slate-200 hover:bg-slate-300 text-slate-700"
                       }`}
                     >

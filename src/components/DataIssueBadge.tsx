@@ -21,7 +21,7 @@ export const DataIssueBadge: React.FC<DataIssueBadgeProps> = ({ severity }) => {
       classes = "bg-amber-100 text-amber-800 border-amber-300 font-semibold";
       break;
     case "Média":
-      classes = "bg-blue-100 text-blue-800 border-blue-200";
+      classes = "bg-sky-100 text-sky-800 border-sky-200";
       break;
     case "Baixa":
       classes = "bg-gray-100 text-gray-600 border-gray-200";

@@ -123,8 +123,8 @@ export const ReplacementPage: React.FC<ReplacementPageProps> = ({ employees }) =
   return (
     <div className="space-y-6">
       {/* Page Title */}
-      <div className="border-b border-sky-100 pb-4">
-        <h2 className="text-lg sm:text-xl font-extrabold text-[#1F1A2C] flex items-center gap-2.5">
+      <div className="rounded-[22px] border border-white bg-gradient-to-br from-[#d5deef] to-[#f0f3fa] p-5 shadow-[0_12px_30px_rgba(57,88,134,0.07)]">
+        <h2 className="text-lg sm:text-xl font-bold text-oxford flex items-center gap-2.5">
           <RefreshCw className="w-5 h-5 text-yinmn" />
           <span>Planejador de Reposição e Vagas</span>
         </h2>
@@ -135,10 +135,10 @@ export const ReplacementPage: React.FC<ReplacementPageProps> = ({ employees }) =
 
       {/* Estatísticas de Cobertura */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 bg-white border border-sky-100 shadow-[0_4px_20px_-4px_rgba(23,105,170,0.04)] rounded-2xl flex items-center justify-between">
+        <div className="p-4 bg-white border border-sky-100 shadow-[0_10px_26px_rgba(57,88,134,0.05)] rounded-[20px] flex items-center justify-between">
           <div>
             <span className="text-[10px] uppercase font-black text-slate-400 block tracking-wider">Total de Idiomas</span>
-            <span className="text-2xl font-extrabold text-[#1F1A2C] block mt-1">{totalIdiomas}</span>
+            <span className="text-2xl font-bold text-oxford block mt-1">{totalIdiomas}</span>
             <p className="text-[10px] text-slate-400 font-semibold mt-1">Lecionados na instituição</p>
           </div>
           <div className="p-3 bg-sky-50 text-yinmn rounded-xl">
@@ -146,7 +146,7 @@ export const ReplacementPage: React.FC<ReplacementPageProps> = ({ employees }) =
           </div>
         </div>
 
-        <div className="p-4 bg-white border border-sky-100 shadow-[0_4px_20px_-4px_rgba(23,105,170,0.04)] rounded-2xl flex items-center justify-between">
+        <div className="p-4 bg-white border border-sky-100 shadow-[0_10px_26px_rgba(57,88,134,0.05)] rounded-[20px] flex items-center justify-between">
           <div>
             <span className="text-[10px] uppercase font-black text-rose-600 block tracking-wider">Idiomas Sob Risco Crítico</span>
             <span className="text-2xl font-extrabold text-rose-600 block mt-1">{emRiscoCriticoCount}</span>
@@ -157,7 +157,7 @@ export const ReplacementPage: React.FC<ReplacementPageProps> = ({ employees }) =
           </div>
         </div>
 
-        <div className="p-4 bg-white border border-sky-100 shadow-[0_4px_20px_-4px_rgba(23,105,170,0.04)] rounded-2xl flex items-center justify-between">
+        <div className="p-4 bg-white border border-sky-100 shadow-[0_10px_26px_rgba(57,88,134,0.05)] rounded-[20px] flex items-center justify-between">
           <div>
             <span className="text-[10px] uppercase font-black text-amber-600 block tracking-wider">Idiomas em Atenção</span>
             <span className="text-2xl font-extrabold text-amber-600 block mt-1">{emAtencaoCount}</span>
@@ -170,16 +170,16 @@ export const ReplacementPage: React.FC<ReplacementPageProps> = ({ employees }) =
       </div>
 
       {/* Main Datagrid */}
-      <div className="bg-white p-6 rounded-2xl border border-sky-100 shadow-[0_4px_20px_-4px_rgba(23,105,170,0.04)] space-y-4">
+      <div className="bg-white p-6 rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(57,88,134,0.06)] space-y-4">
         <div>
-          <h3 className="text-sm font-extrabold text-[#1F1A2C]">Balanço de Cobertura de Línguas</h3>
+          <h3 className="text-sm font-bold text-oxford">Balanço de Cobertura de Línguas</h3>
           <p className="text-xs text-slate-400 font-medium mt-0.5">Visão consolidada do quadro de instrutores ativos e previsão de saídas por idioma</p>
         </div>
 
         <div className="overflow-x-auto no-scrollbar">
           <table className="w-full min-w-[900px] border-collapse text-xs">
             <thead>
-              <tr className="border-b border-sky-100 text-slate-400 font-black uppercase text-[10px] bg-[#FAF9FF]">
+              <tr className="border-b border-sky-100 text-slate-400 font-black uppercase text-[10px] bg-sky-50/60">
                 <th className="py-3 px-3 text-left bg-sky-50/25 rounded-l-xl">Idioma</th>
                 <th className="py-3 px-3 text-center">Instrutores Ativos</th>
                 <th className="py-3 px-3 text-center bg-rose-50 text-rose-800 font-extrabold">Saem 30 d</th>
@@ -188,7 +188,7 @@ export const ReplacementPage: React.FC<ReplacementPageProps> = ({ employees }) =
                 <th className="py-3 px-3 text-center bg-sky-50 text-cadet font-extrabold">Saem 180 d</th>
                 <th className="py-3 px-3 text-center">Cobertura Restante (90d)</th>
                 <th className="py-3 px-3 text-left">Situação de Cobertura</th>
-                <th className="py-3 px-3 text-left bg-[#FAF9FF] rounded-r-xl">Recomendação Operacional</th>
+                <th className="py-3 px-3 text-left bg-sky-50/60 rounded-r-xl">Recomendação Operacional</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-sky-100">
@@ -207,10 +207,10 @@ export const ReplacementPage: React.FC<ReplacementPageProps> = ({ employees }) =
                 return (
                   <tr key={data.idioma} className="hover:bg-sky-50/10 transition-colors duration-200">
                     {/* Idioma */}
-                    <td className="py-4 px-3 font-extrabold text-[#1F1A2C] text-sm">{data.idioma}</td>
+                    <td className="py-4 px-3 font-bold text-oxford text-sm">{data.idioma}</td>
                     
                     {/* Ativos */}
-                    <td className="py-4 px-3 text-center text-sm font-black text-[#1F1A2C]">{data.ativos}</td>
+                    <td className="py-4 px-3 text-center text-sm font-black text-oxford">{data.ativos}</td>
 
                     {/* Exits cols */}
                     <td className="py-4 px-3 text-center font-bold text-rose-600 bg-rose-50/10">{data.saida30}</td>
@@ -222,7 +222,7 @@ export const ReplacementPage: React.FC<ReplacementPageProps> = ({ employees }) =
                     <td className="py-4 px-3">
                       <div className="flex flex-col items-center gap-1.5">
                         <span className="font-extrabold text-slate-700">{data.coberturaRestante}%</span>
-                        <div className="w-16 h-1.5 bg-[#FAF9FF] border border-sky-100/35 rounded-full overflow-hidden">
+                        <div className="w-16 h-1.5 bg-sky-50/60 border border-sky-100/35 rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full ${
                               data.coberturaRestante < 40

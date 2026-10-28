@@ -18,7 +18,7 @@ export const SAMPLE_EMPLOYEES: RhEmployee[] = [
     nome: "Carlos Augusto de Souza",
     cargo: "Instrutor de Espanhol",
     zona: "Zona Sul",
-    turno: "Tarde",
+    turno: "Turno 2",
     dataAdmissao: "2024-01-15", // ~2.5 anos (Férias críticas - Caso 6)
     dataTerminoReal: "2026-07-12", // 9 dias restantes (Crítico)
     statusFuncionario: "Ativo",
@@ -38,7 +38,7 @@ export const SAMPLE_EMPLOYEES: RhEmployee[] = [
     nome: "Yuki Tanaka",
     cargo: "Instrutor de Japonês",
     zona: "Zona Leste",
-    turno: "Manhã",
+    turno: "Turno 1",
     dataAdmissao: "2024-03-10", // ~2.3 anos (Férias concluídas)
     dataTerminoReal: "2026-07-16", // 13 dias restantes (Crítico)
     statusFuncionario: "Ativo",
@@ -64,7 +64,7 @@ export const SAMPLE_EMPLOYEES: RhEmployee[] = [
     nome: "Marcos Vinícius Silva",
     cargo: "Instrutor de Português",
     zona: "Zona Oeste",
-    turno: "Tarde",
+    turno: "Turno 2",
     dataAdmissao: "2025-01-10", // ~1.5 anos (Férias em andamento)
     dataTerminoReal: "2026-07-08", // 5 dias restantes (Crítico)
     statusFuncionario: "Ativo",
@@ -92,7 +92,7 @@ export const SAMPLE_EMPLOYEES: RhEmployee[] = [
     nome: "Sarah Jane Williams",
     cargo: "Instrutor de Inglês",
     zona: "Zona Norte",
-    turno: "Tarde",
+    turno: "Turno 2",
     dataAdmissao: "2024-08-01", // ~1.9 anos (Férias críticas - Caso 6)
     dataTerminoReal: "2026-07-28", // 25 dias restantes (Alto)
     statusFuncionario: "Ativo",
@@ -112,7 +112,7 @@ export const SAMPLE_EMPLOYEES: RhEmployee[] = [
     nome: "John Doe",
     cargo: "Instrutor de Inglês",
     zona: "Zona Norte",
-    turno: "Manhã",
+    turno: "Turno 1",
     dataAdmissao: "2025-02-15", // ~1.4 anos (Apto para férias - Caso 2)
     dataTerminoReal: "2026-07-22", // 19 dias restantes (Alto)
     statusFuncionario: "Ativo",
@@ -134,7 +134,7 @@ export const SAMPLE_EMPLOYEES: RhEmployee[] = [
     nome: "Pierre Dubois",
     cargo: "Instrutor de Francês",
     zona: "Zona Oeste",
-    turno: "Noite",
+    turno: "Turno 3",
     dataAdmissao: "2024-09-15", // ~1.8 anos (Férias marcadas)
     dataTerminoReal: "2026-08-15", // 43 dias restantes (Médio)
     statusFuncionario: "Ativo",
@@ -160,7 +160,7 @@ export const SAMPLE_EMPLOYEES: RhEmployee[] = [
     nome: "Mariana de Oliveira Costa",
     cargo: "Instrutor de Espanhol",
     zona: "Zona Sul",
-    turno: "Manhã",
+    turno: "Turno 1",
     dataAdmissao: "2025-03-01", // ~1.3 anos (Apto para férias - Caso 2)
     dataTerminoReal: "2026-08-28", // 56 dias restantes (Médio)
     statusFuncionario: "Ativo",
@@ -182,7 +182,7 @@ export const SAMPLE_EMPLOYEES: RhEmployee[] = [
     nome: "Juliana Mendes Alencar",
     cargo: "Supervisor de Ensino",
     zona: "Zona Leste",
-    turno: "Tarde",
+    turno: "Turno 2",
     dataAdmissao: "2023-05-10", // ~3.1 anos (Férias marcadas - Caso 3)
     dataTerminoReal: "2026-10-15", // ~104 dias (Baixo)
     statusFuncionario: "Ativo",
@@ -208,7 +208,7 @@ export const SAMPLE_EMPLOYEES: RhEmployee[] = [
     nome: "Amelia Smith",
     cargo: "Instrutor de Inglês",
     zona: "Zona Norte",
-    turno: "Noite",
+    turno: "Turno 3",
     dataAdmissao: "2025-05-15", // ~1.1 anos (Férias divididas em 2 períodos - Caso 4)
     dataTerminoReal: "2026-11-20", // ~140 dias (Baixo)
     statusFuncionario: "Ativo",
@@ -239,7 +239,7 @@ export const SAMPLE_EMPLOYEES: RhEmployee[] = [
     nome: "Alessandro Rossi",
     cargo: "Instrutor de Italiano",
     zona: "Zona Oeste",
-    turno: "Noite",
+    turno: "Turno 3",
     dataAdmissao: "2025-06-01", // ~1.1 anos (Vendeu 10 dias de férias - Caso 5)
     dataTerminoReal: "2026-12-10", // ~160 dias (Baixo)
     statusFuncionario: "Ativo",
@@ -267,7 +267,7 @@ export const SAMPLE_EMPLOYEES: RhEmployee[] = [
     nome: "Fernando Henrique Cardoso Jr",
     cargo: "Coordenador Pedagógico",
     zona: "Administrativo",
-    turno: "Manhã",
+    turno: "Turno 1",
     dataAdmissao: "2026-01-10", // ~6 meses (Menos de 1 ano de trabalho - Caso 1)
     dataTerminoReal: "2028-01-10", // Sem risco
     statusFuncionario: "Ativo",
@@ -287,7 +287,7 @@ export const SAMPLE_EMPLOYEES: RhEmployee[] = [
     nome: "Amanda Ribeiro Lima",
     cargo: "Instrutor de Espanhol",
     zona: "Zona Sul",
-    turno: "Tarde",
+    turno: "Turno 2",
     dataAdmissao: "2026-02-01", // ~5 meses (Menos de 1 ano de trabalho - Caso 1)
     dataTerminoReal: "2027-06-30", // Sem risco
     statusFuncionario: "Ativo",
@@ -309,7 +309,7 @@ export const SAMPLE_EMPLOYEES: RhEmployee[] = [
     nome: "Roberto Gimenes",
     cargo: "Instrutor de Espanhol",
     zona: "Zona Sul",
-    turno: "Tarde",
+    turno: "Turno 2",
     dataAdmissao: "2025-10-01", // ~9 meses (Menos de 1 ano de trabalho - Caso 1)
     dataTerminoReal: "", // Sem data de término (Crítica)
     statusFuncionario: "Ativo",
@@ -329,7 +329,7 @@ export const SAMPLE_EMPLOYEES: RhEmployee[] = [
     nome: "Letícia Alves Santos",
     cargo: "Instrutor de Inglês",
     zona: "Zona Norte",
-    turno: "Manhã",
+    turno: "Turno 1",
     dataAdmissao: "2025-10-15", // ~8.5 meses (Menos de 1 ano de trabalho - Caso 1)
     dataTerminoReal: "2026-08-30",
     statusFuncionario: "Ativo",
@@ -349,7 +349,7 @@ export const SAMPLE_EMPLOYEES: RhEmployee[] = [
     nome: "Paulo Ricardo Meireles",
     cargo: "Instrutor de Português",
     zona: "", // Sem zona cadastrada (Alta)
-    turno: "Manhã",
+    turno: "Turno 1",
     dataAdmissao: "2025-11-01", // ~8 meses (Menos de 1 ano de trabalho - Caso 1)
     dataTerminoReal: "2026-09-30",
     statusFuncionario: "Ativo",
@@ -389,7 +389,7 @@ export const SAMPLE_EMPLOYEES: RhEmployee[] = [
     nome: "Camila Guimarães Rocha",
     cargo: "Instrutor de Francês",
     zona: "Zona Oeste",
-    turno: "Noite",
+    turno: "Turno 3",
     dataAdmissao: "2025-12-01", // ~7 meses (Menos de 1 ano de trabalho - Caso 1)
     dataTerminoReal: "2026-11-15",
     statusFuncionario: "Ativo",
@@ -409,7 +409,7 @@ export const SAMPLE_EMPLOYEES: RhEmployee[] = [
     nome: "Tiago Henrique Martins",
     cargo: "Instrutor de Alemão",
     zona: "Zona Leste",
-    turno: "Tarde",
+    turno: "Turno 2",
     dataAdmissao: "2026-03-01", // ~4 meses (Menos de 1 ano de trabalho - Caso 1)
     dataTerminoReal: "2026-12-15",
     statusFuncionario: "Ativo",
@@ -429,7 +429,7 @@ export const SAMPLE_EMPLOYEES: RhEmployee[] = [
     nome: "Renata Vasconcellos",
     cargo: "Instrutor de Espanhol",
     zona: "Zona Sul",
-    turno: "Noite",
+    turno: "Turno 3",
     dataAdmissao: "2026-03-15", // ~3.5 meses (Menos de 1 ano de trabalho - Caso 1)
     dataTerminoReal: "2027-01-30",
     statusFuncionario: "Ativo",
@@ -451,7 +451,7 @@ export const SAMPLE_EMPLOYEES: RhEmployee[] = [
     nome: "Daniel Jackson",
     cargo: "Instrutor de Coreano",
     zona: "Zona Norte",
-    turno: "Manhã",
+    turno: "Turno 1",
     dataAdmissao: "2026-08-01", // Começará no futuro
     dataTerminoReal: "2028-08-01",
     statusFuncionario: "A começar",
@@ -473,7 +473,7 @@ export const SAMPLE_EMPLOYEES: RhEmployee[] = [
     nome: "Ricardo Dias Fonseca",
     cargo: "Instrutor de Inglês",
     zona: "Zona Norte",
-    turno: "Noite",
+    turno: "Turno 3",
     dataAdmissao: "2023-02-15",
     dataTerminoReal: "2026-05-30", // Já encerrou
     statusFuncionario: "Encerrado",
@@ -493,7 +493,7 @@ export const SAMPLE_EMPLOYEES: RhEmployee[] = [
     nome: "Beatriz Nogueira Cruz",
     cargo: "Instrutor de Espanhol",
     zona: "Zona Sul",
-    turno: "Tarde",
+    turno: "Turno 2",
     dataAdmissao: "2024-01-10",
     dataTerminoReal: "2026-06-20", // Já encerrou
     statusFuncionario: "Encerrado",

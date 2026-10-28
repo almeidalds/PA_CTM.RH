@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "appId": null,
+  "appId": "ebe74cac-186d-4fe2-aaa9-397cb3aeeaf5",
   "appDisplayName": "CTM - RH",
   "region": "prod",
   "appType": "CodeApp",
@@ -19,19 +19,9 @@
           "logicalName": "ctmbrasi_employeerecords",
           "isHidden": false
         },
-        "rhcontractrenewals": {
-          "entitySetName": "ctmbrasi_rhcontractrenewalses",
-          "logicalName": "ctmbrasi_rhcontractrenewals",
-          "isHidden": false
-        },
         "rhemployeelanguages": {
           "entitySetName": "ctmbrasi_rhemployeelanguageses",
           "logicalName": "ctmbrasi_rhemployeelanguages",
-          "isHidden": false
-        },
-        "rhlanguages": {
-          "entitySetName": "ctmbrasi_rhlanguageses",
-          "logicalName": "ctmbrasi_rhlanguages",
           "isHidden": false
         },
         "rhpositions": {
@@ -39,9 +29,29 @@
           "logicalName": "ctmbrasi_rhpositions",
           "isHidden": false
         },
+        "rhzones": {
+          "entitySetName": "ctmbrasi_rhzoneses",
+          "logicalName": "ctmbrasi_rhzones",
+          "isHidden": false
+        },
         "rhshifts": {
           "entitySetName": "ctmbrasi_rhshiftses",
           "logicalName": "ctmbrasi_rhshifts",
+          "isHidden": false
+        },
+        "rhlanguages": {
+          "entitySetName": "ctmbrasi_rhlanguageses",
+          "logicalName": "ctmbrasi_rhlanguages",
+          "isHidden": false
+        },
+        "rhvacationperiods": {
+          "entitySetName": "ctmbrasi_rhvacationperiodses",
+          "logicalName": "ctmbrasi_rhvacationperiods",
+          "isHidden": false
+        },
+        "rhcontractrenewals": {
+          "entitySetName": "ctmbrasi_rhcontractrenewalses",
+          "logicalName": "ctmbrasi_rhcontractrenewals",
           "isHidden": false
         },
         "rhsubstitutions": {
@@ -52,16 +62,6 @@
         "rhtimelineevents": {
           "entitySetName": "ctmbrasi_rhtimelineeventses",
           "logicalName": "ctmbrasi_rhtimelineevents",
-          "isHidden": false
-        },
-        "rhvacationperiods": {
-          "entitySetName": "ctmbrasi_rhvacationperiodses",
-          "logicalName": "ctmbrasi_rhvacationperiods",
-          "isHidden": false
-        },
-        "rhzones": {
-          "entitySetName": "ctmbrasi_rhzoneses",
-          "logicalName": "ctmbrasi_rhzones",
           "isHidden": false
         },
         "users": {

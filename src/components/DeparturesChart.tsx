@@ -15,7 +15,7 @@ export function DeparturesChart({ employees, onSelectEmployee }: {
   const maxCount = Math.max(1, ...months.map((month) => month.employees.length));
   const total = months.reduce((sum, month) => sum + month.employees.length, 0);
 
-  return <section className="lg:col-span-8 min-w-0 rounded-2xl border border-sky-100 bg-white p-5 sm:p-6" aria-label="Saídas previstas por mês">
+  return <section className="lg:col-span-8 min-w-0 rounded-[22px] border border-sky-100 bg-white p-5 shadow-[0_12px_32px_rgba(57,88,134,0.055)] sm:p-6" aria-label="Saídas previstas por mês">
     <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
       <div><p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-yinmn">Planejamento de contratos</p><h3 className="text-base font-bold text-oxford">Saídas previstas por mês</h3><p className="mt-1 text-xs leading-relaxed text-slate-500">Clique na barra ou no mês para ver os colaboradores.</p></div>
       <span className="rounded-lg bg-sky-50 px-3 py-2 text-xs font-semibold text-yinmn">{total} {total === 1 ? "término previsto" : "términos previstos"}</span>

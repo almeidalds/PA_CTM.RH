@@ -46,7 +46,7 @@ export const PendingPage: React.FC<PendingPageProps> = ({ employees, onEditEmplo
     });
 
   const MiniKpi = ({ title, value, icon: Icon, colorClass, highlight }: { title: string; value: number | string; icon: any; colorClass: string; highlight?: boolean }) => (
-    <div className={`p-4 rounded-2xl border bg-white shadow-[0_4px_12px_rgba(23,105,170,0.02)] flex items-center justify-between transition-all duration-300 ${highlight ? "border-sky-200 bg-sky-50/30" : "border-sky-100"}`}>
+    <div className={`p-4 rounded-[20px] border bg-white shadow-[0_10px_24px_rgba(57,88,134,0.05)] flex items-center justify-between transition-all duration-300 ${highlight ? "border-sky-200 bg-sky-50/30" : "border-sky-100"}`}>
       <div className="min-w-0 pr-2">
         <span className="text-[10px] uppercase font-black text-slate-400 block truncate tracking-wider">{title}</span>
         <span className={`text-lg font-extrabold mt-1 block ${colorClass}`}>{value}</span>
@@ -60,19 +60,19 @@ export const PendingPage: React.FC<PendingPageProps> = ({ employees, onEditEmplo
   return (
     <div className="space-y-6">
       {/* Title Header */}
-      <div className="border-b border-sky-100 pb-4">
-        <h2 className="text-lg sm:text-xl font-extrabold text-[#1F1A2C] flex items-center gap-2.5">
+      <div className="rounded-[22px] border border-white bg-gradient-to-br from-[#d5deef] to-[#f0f3fa] p-5 shadow-[0_12px_30px_rgba(57,88,134,0.07)]">
+        <h2 className="text-lg sm:text-xl font-bold text-oxford flex items-center gap-2.5">
           <FileCheck2 className="w-5 h-5 text-yinmn" />
-          <span>Saneamento de Pendências Cadastrais</span>
+          <span>Pendências Cadastrais</span>
         </h2>
         <p className="text-xs text-slate-400 font-medium mt-1">
-          Identifique e corrija omissões e lacunas de dados cruciais nos cadastros. Registros completos garantem relatórios e análises de risco precisas.
+          Identifique e corrija omissões e lacunas de dados cruciais nos cadastros. Registros completos garantem indicadores e análises de risco precisas.
         </p>
       </div>
 
       {/* Mini KPIs Quality Panel */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-9 gap-3">
-        <MiniKpi title="Total" value={stats.total} icon={Briefcase} colorClass="text-[#1F1A2C]" />
+        <MiniKpi title="Total" value={stats.total} icon={Briefcase} colorClass="text-oxford" />
         <MiniKpi title="Completos" value={stats.completos} icon={ShieldCheck} colorClass="text-emerald-600" highlight={stats.percentualQualidade === 100} />
         <MiniKpi title="Pendentes" value={stats.comPendencia} icon={FileWarning} colorClass="text-rose-600" />
         <MiniKpi title="Sem Idioma" value={stats.semIdioma} icon={Languages} colorClass="text-amber-600" />
@@ -84,10 +84,10 @@ export const PendingPage: React.FC<PendingPageProps> = ({ employees, onEditEmplo
       </div>
 
       {/* Main Remediator Section */}
-      <div className="bg-white p-6 rounded-2xl border border-sky-100 shadow-[0_4px_20px_-4px_rgba(23,105,170,0.04)] space-y-4">
+      <div className="bg-white p-6 rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(57,88,134,0.06)] space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h3 className="text-sm font-extrabold text-[#1F1A2C]">Registros Pendentes de Correção</h3>
+            <h3 className="text-sm font-bold text-oxford">Registros Pendentes de Correção</h3>
             <p className="text-xs text-slate-400 font-medium mt-0.5">Clique em editar para suprir dados faltantes e recalcular conformidade do sistema</p>
           </div>
           
@@ -101,7 +101,7 @@ export const PendingPage: React.FC<PendingPageProps> = ({ employees, onEditEmplo
         <div className="overflow-x-auto no-scrollbar">
           <table className="w-full min-w-[900px] border-collapse text-xs">
             <thead>
-              <tr className="border-b border-sky-100 text-slate-400 font-black uppercase text-[10px] bg-[#FAF9FF]">
+              <tr className="border-b border-sky-100 text-slate-400 font-black uppercase text-[10px] bg-sky-50/60">
                 <th className="py-3 px-3 text-left">Funcionário</th>
                 <th className="py-3 px-3 text-left">ID Funcional</th>
                 <th className="py-3 px-3 text-left">Cargo</th>
@@ -127,7 +127,7 @@ export const PendingPage: React.FC<PendingPageProps> = ({ employees, onEditEmplo
                 return (
                   <tr key={emp.recordId} className="hover:bg-sky-50/20 transition-colors duration-200">
                     {/* Nome */}
-                    <td className="py-3.5 px-3 font-extrabold text-[#1F1A2C]">{emp.nome}</td>
+                    <td className="py-3.5 px-3 font-bold text-oxford">{emp.nome}</td>
                     
                     {/* ID */}
                     <td className="py-3.5 px-3 font-mono font-bold text-slate-400">
@@ -169,7 +169,7 @@ export const PendingPage: React.FC<PendingPageProps> = ({ employees, onEditEmplo
                     <td className="py-3.5 px-3 text-center">
                       <button
                         onClick={() => onEditEmployee(emp)}
-                        className="inline-flex items-center gap-1.5 bg-[#FAF9FF] hover:bg-sky-50 text-slate-500 hover:text-yinmn font-bold px-3 py-1.5 rounded-xl border border-sky-100 transition-all duration-200 cursor-pointer"
+                        className="inline-flex items-center gap-1.5 bg-sky-50/50 hover:bg-sky-50 text-slate-500 hover:text-yinmn font-bold px-3 py-1.5 rounded-xl border border-sky-100 transition-all duration-200 cursor-pointer"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
                         <span>Editar</span>
@@ -184,7 +184,7 @@ export const PendingPage: React.FC<PendingPageProps> = ({ employees, onEditEmplo
                   <td colSpan={8} className="py-12 text-center">
                     <div className="max-w-sm mx-auto space-y-3">
                       <ShieldCheck className="w-12 h-12 text-emerald-500 mx-auto" />
-                      <h4 className="text-base font-extrabold text-[#1F1A2C]">Base de dados 100% sã!</h4>
+                      <h4 className="text-base font-bold text-oxford">Base de dados 100% sã!</h4>
                       <p className="text-xs text-slate-400 font-semibold">Todos os cadastros estão devidamente preenchidos e válidos.</p>
                     </div>
                   </td>

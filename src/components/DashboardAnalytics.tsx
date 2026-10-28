@@ -6,7 +6,7 @@ import type { DataQualityStats } from "../utils/dataQualityUtils";
 export function DataIntegrityCard({ quality }: { quality: DataQualityStats }) {
   const percent = quality.total ? quality.percentualQualidade : 0;
   return (
-    <section aria-label="Integridade cadastral" className="lg:col-span-4 flex flex-col gap-5 rounded-2xl border border-sky-100 bg-white p-5 sm:p-6">
+    <section aria-label="Integridade cadastral" className="lg:col-span-4 flex flex-col gap-5 rounded-[22px] border border-sky-100 bg-white p-5 shadow-[0_12px_32px_rgba(57,88,134,0.055)] sm:p-6">
       <div className="flex items-center gap-3">
         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-50 text-yinmn"><ShieldAlert className="h-5 w-5" /></span>
         <div><h3 className="text-sm font-bold text-oxford">Integridade cadastral</h3><p className="mt-1 text-xs text-slate-500">Qualidade dos dados da equipe</p></div>
@@ -35,7 +35,7 @@ interface DistributionPanelProps {
   totalCount: number;
 }
 const riskColors: Record<string, string> = {
-  "Crítico": "bg-rose-500", "Alto": "bg-amber-500", "Médio": "bg-blue-500",
+  "Crítico": "bg-rose-500", "Alto": "bg-amber-500", "Médio": "bg-sky-500",
   "Baixo": "bg-sky-400", "Sem risco": "bg-emerald-500", "Cadastro incompleto": "bg-slate-400",
 };
 
@@ -44,7 +44,7 @@ export function DistributionPanel({ languages, zones, shifts, risks, statuses, a
   const panelId = useId();
   const views = [
     { id: "idiomas", label: "Idiomas", icon: Globe, data: languages, title: "Idiomas da equipe ativa", description: "Um colaborador pode aparecer em mais de um idioma.", base: activeCount },
-    { id: "zonas", label: "Regiões", icon: MapPin, data: zones, title: "Distribuição por região", description: "Localização dos colaboradores com vínculo ativo.", base: activeCount },
+    { id: "zonas", label: "Zonas", icon: MapPin, data: zones, title: "Distribuição por região", description: "Localização dos colaboradores com vínculo ativo.", base: activeCount },
     { id: "turnos", label: "Turnos", icon: Clock, data: shifts, title: "Distribuição por turno", description: "Alocação dos colaboradores com vínculo ativo.", base: activeCount },
     { id: "risco", label: "Riscos", icon: ShieldAlert, data: risks, title: "Classificação de risco", description: "Classificação dos contratos de todos os colaboradores.", base: totalCount },
     { id: "status", label: "Status", icon: Layers3, data: statuses, title: "Situação dos vínculos", description: "Colaboradores agrupados pela situação do cadastro.", base: totalCount },
@@ -53,7 +53,7 @@ export function DistributionPanel({ languages, zones, shifts, risks, statuses, a
   const rows = [...view.data].sort((a, b) => b.count - a.count);
   const max = Math.max(1, ...rows.map((item) => item.count));
   return (
-    <section aria-label="Distribuição e cobertura de funcionários" className="overflow-hidden rounded-2xl border border-sky-100 bg-white">
+    <section aria-label="Distribuição e cobertura de funcionários" className="overflow-hidden rounded-[22px] border border-sky-100 bg-white shadow-[0_12px_32px_rgba(57,88,134,0.055)]">
       <div className="flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
         <div><p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-yinmn">Panorama da equipe</p><h3 className="text-lg font-bold tracking-tight text-oxford sm:text-xl">Distribuição e cobertura</h3><p className="mt-1 text-xs text-slate-500">Explore o quadro de funcionários por categoria.</p></div>
         <span className="flex items-center gap-2 rounded-xl bg-sky-50 px-3 py-2 text-xs font-semibold text-yinmn"><Users className="h-4 w-4" />{activeCount} ativos / {totalCount} colaboradores</span>

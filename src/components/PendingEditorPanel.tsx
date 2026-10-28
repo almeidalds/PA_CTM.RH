@@ -103,9 +103,9 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
       />
 
       {/* Flyout panel */}
-      <div className="relative w-full max-w-xl bg-slate-50 h-full shadow-[0_0_45px_rgba(16,42,67,0.12)] flex flex-col z-10">
+      <div className="relative w-full max-w-xl bg-[#f0f3fa] h-full shadow-[0_0_70px_rgba(57,88,134,0.28)] flex flex-col z-10 sm:rounded-l-[28px] overflow-hidden">
         {/* Header */}
-        <div className="bg-white text-oxford px-6 py-5 flex items-center justify-between border-b border-sky-100">
+        <div className="bg-gradient-to-r from-[#d5deef] to-[#f0f3fa] text-oxford px-6 py-5 flex items-center justify-between border-b border-white">
           <div>
             <span className="text-[10px] font-black uppercase tracking-[0.16em] text-yinmn block mb-1">{mode === "create" ? "Diretório de funcionários" : "Qualidade cadastral"}</span>
             <h2 id="editor-panel-title" className="text-base font-extrabold tracking-tight text-oxford">
@@ -156,7 +156,7 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
             {/* ID do funcionário */}
             <div>
               <label className="block text-xs font-bold text-slate-500 mb-1.5">
-                ID Funcional (Formato: CTM-AAAA-XXX)
+                ID Global
               </label>
               <input
                 type="text"
@@ -206,7 +206,7 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
 
               {/* Zona */}
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5">Zona de Atuação</label>
+                <label className="block text-xs font-bold text-slate-500 mb-1.5">Zona</label>
                 <select
                   value={formData.zona}
                   onChange={(e) => handleChange("zona", e.target.value)}
@@ -273,7 +273,7 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
                   value={formData.emailCorporativo}
                   onChange={(e) => handleChange("emailCorporativo", e.target.value)}
                   className="w-full text-xs px-3.5 py-2.5 rounded-lg border border-sky-100 focus:outline-none focus:ring-2 focus:ring-yinmn/20 focus:border-yinmn text-oxford font-medium"
-                  placeholder="Ex: funcionario@ctm.org.br"
+                  placeholder="Ex: funcionario@churchofjesuschrist.org"
                 />
               </div>
 
@@ -292,7 +292,7 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
             {/* Seleção de Idiomas */}
             <div className="p-4 bg-white rounded-xl border border-sky-100">
               <label className="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-2.5">
-                Idiomas Lecionados ({formData.idiomas?.length || 0})
+                Idiomas ({formData.idiomas?.length || 0})
               </label>
               
               <div className="grid grid-cols-2 gap-2">

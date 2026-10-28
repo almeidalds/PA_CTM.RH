@@ -13,19 +13,18 @@ import {
   AlertTriangle,
   User,
   Calendar,
-  Layers,
   Clock,
   Globe2,
   FileEdit,
   ClipboardCheck,
   Plus,
-  MessageSquare,
-  ShieldAlert,
   FileText,
   Plane,
   RefreshCw,
   Settings,
-  Filter
+  MapPin,
+  BriefcaseBusiness,
+  ExternalLink
 } from "lucide-react";
 import { RhEmployee, TimelineEvent, TimelineEventCategory } from "../types/rh";
 import { formatarDataBR, calcularDiasRestantes } from "../utils/dateUtils";
@@ -132,6 +131,28 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
   const risk = calcularRisco(employee);
   const pendencias = identificarPendencias(employee);
   const dias = calcularDiasRestantes(employee.dataTerminoReal);
+  const initials = employee.nome
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+
+  const contractProgress = (() => {
+    const start = new Date(employee.dataAdmissao).getTime();
+    const end = new Date(employee.dataTerminoReal).getTime();
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0;
+    const elapsed = Date.now() - start;
+    return Math.max(0, Math.min(100, Math.round((elapsed / (end - start)) * 100)));
+  })();
+
+  const contractTone =
+    risk === "Crítico"
+      ? "border-rose-200 bg-rose-50/70 text-rose-700"
+      : risk === "Alto"
+        ? "border-amber-200 bg-amber-50/70 text-amber-700"
+        : "border-sky-200 bg-sky-50 text-cadet";
 
   const handleCopyEmail = () => {
     if (!employee.emailCorporativo) return;
@@ -159,51 +180,61 @@ Risco: ${risk}`;
     <div className="fixed inset-0 z-50 overflow-hidden flex justify-end" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
       {/* Backdrop overlay */}
       <div
-          className="absolute inset-0 bg-slate-950/25 backdrop-blur-[2px] transition-opacity"
+          className="absolute inset-0 bg-[#395886]/30 backdrop-blur-[3px] transition-opacity"
         onClick={onClose}
       />
 
       {/* Flyout panel */}
-      <div className="relative w-full max-w-lg bg-white h-full shadow-2xl flex flex-col z-10 transition-transform duration-300 translate-x-0">
+      <div className="relative w-full max-w-xl bg-[#f0f3fa] h-full shadow-[0_0_70px_rgba(57,88,134,0.28)] flex flex-col z-10 transition-transform duration-300 translate-x-0 sm:rounded-l-[28px] overflow-hidden">
         {/* Header */}
-          <div className="bg-white text-oxford px-6 py-5 flex items-center justify-between border-b border-sky-100">
-          <div className="flex items-center gap-3">
-              <div className="w-11 h-11 bg-sky-50 rounded-xl flex items-center justify-center border border-sky-100">
-                <User className="w-5 h-5 text-yinmn" />
+        <div className="border-b border-sky-100 bg-white px-5 py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-yinmn to-cadet text-sm font-bold text-white shadow-[0_8px_20px_rgba(99,142,203,0.24)]">
+                {initials || <User className="h-5 w-5" />}
+              </div>
+              <div className="min-w-0">
+                <span className="mb-0.5 block text-[9px] font-bold uppercase tracking-[0.16em] text-yinmn">Perfil do funcionário</span>
+                <h2 id="slide-over-title" className="max-w-[320px] truncate text-base font-bold tracking-tight text-oxford">
+                  {employee.nome}
+                </h2>
+                <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[10px] text-slate-400">
+                  <span>{employee.cargo || "Cargo não informado"}</span>
+                  <span aria-hidden="true">•</span>
+                  <span className="font-mono">{employee.idFuncionario || "ID pendente"}</span>
+                </p>
+              </div>
             </div>
-            <div>
-                <span className="text-[10px] font-black uppercase tracking-[0.16em] text-yinmn block mb-1">Ficha do colaborador</span>
-                <h2 className="text-base font-extrabold tracking-tight truncate max-w-[280px] text-oxford">
-                {employee.nome}
-              </h2>
-                <p className="text-xs text-slate-400 font-mono mt-0.5">
-                {employee.idFuncionario || "ID Pendente"}
-              </p>
-            </div>
-          </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg text-slate-400 hover:text-yinmn hover:bg-sky-50 transition-colors cursor-pointer"
+            className="shrink-0 rounded-xl p-2 text-slate-400 transition-colors hover:bg-sky-50 hover:text-yinmn cursor-pointer"
+            aria-label="Fechar detalhes do funcionário"
           >
-            <X className="w-5 h-5" />
+            <X className="h-4 w-4" />
           </button>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2 pl-[60px]">
+            <StatusBadge status={employee.statusFuncionario} />
+            <RiskBadge level={risk} />
+            {pendencias.length > 0 && (
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[9px] font-bold text-amber-700">
+                {pendencias.length} {pendencias.length === 1 ? "pendência" : "pendências"}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
-          {/* Quick Stats Badges */}
-          <div className="flex flex-wrap items-center gap-2 pb-5 border-b border-sky-100">
-            <StatusBadge status={employee.statusFuncionario} />
-            <RiskBadge level={risk} />
-          </div>
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5">
 
           {/* Dados do Cargo e Turno */}
           <div className="space-y-4">
-            <h3 className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">Informações de lotação</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white p-3.5 rounded-xl border border-sky-100">
+            <h3 className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">Informações</h3>
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="bg-white p-3.5 rounded-[16px] border border-sky-100 shadow-[0_8px_20px_rgba(57,88,134,0.04)]">
                 <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">
-                  <Layers className="w-3.5 h-3.5" />
+                  <BriefcaseBusiness className="w-3.5 h-3.5" />
                   <span className="text-[10px] uppercase font-bold">Cargo</span>
                 </div>
                 <p className="text-xs font-bold text-oxford truncate">
@@ -211,7 +242,7 @@ Risco: ${risk}`;
                 </p>
               </div>
 
-              <div className="bg-white p-3.5 rounded-xl border border-sky-100">
+              <div className="bg-white p-3.5 rounded-[16px] border border-sky-100 shadow-[0_8px_20px_rgba(57,88,134,0.04)]">
                 <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">
                   <Clock className="w-3.5 h-3.5" />
                   <span className="text-[10px] uppercase font-bold">Turno</span>
@@ -221,9 +252,9 @@ Risco: ${risk}`;
                 </p>
               </div>
 
-              <div className="bg-white p-3.5 rounded-xl border border-sky-100">
+              <div className="bg-white p-3.5 rounded-[16px] border border-sky-100 shadow-[0_8px_20px_rgba(57,88,134,0.04)]">
                 <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">
-                  <Layers className="w-3.5 h-3.5" />
+                  <MapPin className="w-3.5 h-3.5" />
                   <span className="text-[10px] uppercase font-bold">Zona</span>
                 </div>
                 <p className="text-xs font-bold text-oxford truncate">
@@ -231,7 +262,7 @@ Risco: ${risk}`;
                 </p>
               </div>
 
-              <div className="bg-white p-3.5 rounded-xl border border-sky-100">
+              <div className="bg-white p-3.5 rounded-[16px] border border-sky-100 shadow-[0_8px_20px_rgba(57,88,134,0.04)]">
                 <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">
                   <Globe2 className="w-3.5 h-3.5" />
                   <span className="text-[10px] uppercase font-bold">Idiomas</span>
@@ -244,55 +275,75 @@ Risco: ${risk}`;
           </div>
 
           {/* Datas de Contrato */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             <h3 className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">Vigência contratual</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white p-3.5 rounded-xl border border-sky-100">
-                <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span className="text-[10px] uppercase font-bold">Admissão</span>
+            <div className="overflow-hidden rounded-[18px] border border-sky-100 bg-white shadow-[0_8px_20px_rgba(57,88,134,0.04)]">
+              <div className="grid grid-cols-2 divide-x divide-sky-100">
+                <div className="p-3.5">
+                  <div className="mb-1.5 flex items-center gap-1.5 text-slate-400">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span className="text-[9px] font-bold uppercase">Admissão</span>
+                  </div>
+                  <p className="text-xs font-semibold text-oxford">
+                    {formatarDataBR(employee.dataAdmissao)}
+                  </p>
                 </div>
-                <p className="text-xs font-semibold text-gray-800">
-                  {formatarDataBR(employee.dataAdmissao)}
-                </p>
+
+                <div className="p-3.5">
+                  <div className="mb-1.5 flex items-center gap-1.5 text-slate-400">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span className="text-[9px] font-bold uppercase">Término previsto</span>
+                  </div>
+                  <p className="text-xs font-semibold text-oxford">
+                    {formatarDataBR(employee.dataTerminoReal)}
+                  </p>
+                </div>
               </div>
 
-              <div className="bg-white p-3.5 rounded-xl border border-sky-100">
-                <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span className="text-[10px] uppercase font-bold">Término Real</span>
+              {employee.statusFuncionario !== "Encerrado" && employee.dataTerminoReal && (
+                <div className="border-t border-sky-100 bg-sky-50/50 p-3.5">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <span className="block text-[9px] font-bold uppercase tracking-wide text-slate-400">Tempo restante</span>
+                      <span className="text-base font-bold text-oxford">
+                        {dias !== null && dias >= 0 ? `${dias} dias` : "Prazo encerrado"}
+                      </span>
+                    </div>
+                    <span className={`rounded-lg border px-2.5 py-1 text-[9px] font-bold ${contractTone}`}>
+                      {risk}
+                    </span>
+                  </div>
+                  <div
+                    role="progressbar"
+                    aria-label="Progresso da vigência contratual"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={contractProgress}
+                    className="h-1.5 overflow-hidden rounded-full bg-sky-100"
+                  >
+                    <div className="h-full rounded-full bg-gradient-to-r from-yinmn to-[#8aaee0]" style={{ width: `${contractProgress}%` }} />
+                  </div>
+                  <div className="mt-1.5 flex justify-between text-[8px] font-medium text-slate-400">
+                    <span>Início</span>
+                    <span>{contractProgress}% da vigência</span>
+                    <span>Término</span>
+                  </div>
                 </div>
-                <p className="text-xs font-semibold text-gray-800">
-                  {formatarDataBR(employee.dataTerminoReal)}
-                </p>
-              </div>
+              )}
             </div>
-
-            {employee.statusFuncionario !== "Encerrado" && employee.dataTerminoReal && (
-              <div className="p-4 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] uppercase font-black text-cadet block">Tempo restante de contrato</span>
-                  <span className="text-sm font-black text-oxford">
-                    {dias !== null && dias >= 0 ? `${dias} dias` : "Contrato encerrado ou inválido"}
-                  </span>
-                </div>
-                <div className="text-right">
-                  <span className="text-[10px] uppercase font-black text-cadet block">Status de risco</span>
-                  <span className="text-xs font-bold text-oxford">{risk}</span>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Contatos Corporativos */}
           <div className="space-y-4">
-            <h3 className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">Contato e salas virtuais</h3>
+            <h3 className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">Contatos</h3>
             
             <div className="space-y-2">
               {/* E-mail */}
-              <div className="flex items-center justify-between p-3.5 rounded-xl border border-sky-100 hover:border-sky-200 transition-all bg-white">
+              <div className="flex items-center justify-between rounded-[16px] border border-sky-100 bg-white p-3 shadow-[0_6px_16px_rgba(57,88,134,0.035)] transition-all hover:border-sky-200">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <Mail className="w-4 h-4 text-gray-400 shrink-0" />
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-yinmn">
+                    <Mail className="h-4 w-4" />
+                  </span>
                   <div className="min-w-0">
                     <span className="text-[9px] uppercase font-bold text-gray-400 block">E-mail Corporativo</span>
                     <p className="text-xs text-gray-700 truncate font-semibold">
@@ -303,18 +354,21 @@ Risco: ${risk}`;
                 {employee.emailCorporativo && (
                   <button
                     onClick={handleCopyEmail}
-                    className="p-1.5 text-gray-400 hover:text-[#00995D] hover:bg-gray-50 rounded-lg transition-colors"
+                    className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-sky-50 hover:text-yinmn"
                     title="Copiar e-mail"
+                    aria-label="Copiar e-mail corporativo"
                   >
-                    {copiedEmail ? <Check className="w-4 h-4 text-[#00995D]" /> : <Copy className="w-4 h-4" />}
+                    {copiedEmail ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
                   </button>
                 )}
               </div>
 
               {/* Zoom Link */}
-              <div className="flex items-center justify-between p-3.5 rounded-xl border border-sky-100 hover:border-sky-200 transition-all bg-white">
+              <div className="flex items-center justify-between rounded-[16px] border border-sky-100 bg-white p-3 shadow-[0_6px_16px_rgba(57,88,134,0.035)] transition-all hover:border-sky-200">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <Video className="w-4 h-4 text-gray-400 shrink-0" />
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#d5deef] text-[#395886]">
+                    <Video className="h-4 w-4" />
+                  </span>
                   <div className="min-w-0">
                     <span className="text-[9px] uppercase font-bold text-gray-400 block">Sala Pessoal do Zoom</span>
                     <p className="text-xs text-gray-700 truncate font-semibold">
@@ -327,10 +381,11 @@ Risco: ${risk}`;
                     href={employee.linkZoom}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center justify-center shadow"
+                    className="flex items-center justify-center rounded-lg bg-yinmn p-2 text-white shadow-sm transition-colors hover:bg-cadet"
                     title="Acessar sala de aula virtual"
+                    aria-label="Abrir sala pessoal do Zoom"
                   >
-                    <Video className="w-4 h-4" />
+                    <ExternalLink className="h-4 w-4" />
                   </a>
                 ) : (
                   <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">Não disponível</span>
@@ -358,18 +413,18 @@ Risco: ${risk}`;
           )}
 
           {/* Seção Linha do Tempo */}
-          <div className="border-t border-sky-100 pt-6 space-y-4">
+          <div className="space-y-4 rounded-[18px] border border-sky-100 bg-white p-4 shadow-[0_8px_20px_rgba(57,88,134,0.04)]">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black uppercase tracking-wider text-[#60708A] flex items-center gap-1.5">
+              <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-yinmn" />
-                <span>Linha do Tempo do Instrutor</span>
+                <span>Histórico</span>
               </h3>
               
               {/* Filtro de Categoria */}
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="text-[10px] font-bold text-slate-500 bg-slate-50 border border-sky-100 rounded px-2 py-0.5 focus:outline-none"
+                className="rounded-lg border border-sky-100 bg-sky-50 px-2 py-1.5 text-[9px] font-bold text-slate-500 focus:outline-none"
               >
                 <option value="all">Todas as categorias</option>
                 <option value="Cadastro">Cadastro</option>
@@ -382,7 +437,7 @@ Risco: ${risk}`;
             </div>
 
             {/* Linha do tempo visual */}
-            <div className="relative border-l-2 border-sky-100 pl-4 ml-2.5 space-y-4 pt-1 pb-1">
+            <div className="relative ml-2.5 space-y-3 border-l-2 border-sky-100 pb-1 pl-4 pt-1">
               {events
                 .filter((evt) => selectedCategory === "all" || evt.categoria === selectedCategory)
                 .map((evt) => {
@@ -395,8 +450,8 @@ Risco: ${risk}`;
                     categoryColor = "text-emerald-600";
                     Icon = User;
                   } else if (evt.categoria === "Contrato") {
-                    bulletBg = "bg-blue-500";
-                    categoryColor = "text-blue-600";
+                    bulletBg = "bg-sky-500";
+                    categoryColor = "text-sky-600";
                     Icon = FileText;
                   } else if (evt.categoria === "Férias") {
                     bulletBg = "bg-yinmn";
@@ -424,7 +479,7 @@ Risco: ${risk}`;
                       </span>
 
                       {/* Event Details */}
-                      <div className="bg-sky-50/50 p-3 rounded-xl border border-sky-100 space-y-1 text-xs">
+                      <div className="space-y-1 rounded-xl border border-sky-100 bg-[#f0f3fa] p-3 text-xs transition-colors hover:border-sky-200">
                         <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">
                           <span>{formatarDataBR(evt.data)}</span>
                           <span className={`uppercase text-[8px] font-black ${categoryColor}`}>{evt.categoria}</span>
@@ -457,21 +512,21 @@ Risco: ${risk}`;
             </div>
 
             {/* Formulário rápido para adicionar observação */}
-            <form onSubmit={handleAddObservation} className="bg-slate-50 p-3.5 rounded-2xl border border-sky-100 space-y-3">
-              <span className="text-[10px] uppercase font-black text-slate-400 block">Adicionar Registro Histórico</span>
-              <div className="flex gap-2">
+            <form onSubmit={handleAddObservation} className="space-y-2.5 rounded-xl border border-sky-100 bg-sky-50/60 p-3">
+              <span className="block text-[9px] font-black uppercase tracking-wide text-slate-400">Adicionar ao histórico</span>
+              <div className="grid grid-cols-[1fr_auto_auto] gap-2">
                 <input
                   type="text"
                   placeholder="Escreva uma observação..."
                   value={newObs}
                   onChange={(e) => setNewObs(e.target.value)}
-                  className="flex-1 text-xs bg-white border border-sky-100 rounded-xl px-3 py-2 focus:outline-none focus:border-jordy text-slate-700"
+                  className="min-w-0 text-xs bg-white border border-sky-100 rounded-lg px-3 py-2 focus:outline-none focus:border-jordy text-slate-700"
                 />
                 
                 <select
                   value={newCategory}
                   onChange={(e) => setNewCategory(e.target.value as TimelineEventCategory)}
-                  className="text-xs font-bold text-slate-600 bg-white border border-sky-100 rounded-xl px-2 focus:outline-none"
+                  className="max-w-[105px] text-[10px] font-bold text-slate-600 bg-white border border-sky-100 rounded-lg px-2 focus:outline-none"
                 >
                   <option value="Alteração administrativa">Admin</option>
                   <option value="Cadastro">Cadastro</option>
@@ -483,7 +538,8 @@ Risco: ${risk}`;
 
                 <button
                   type="submit"
-                  className="bg-yinmn hover:bg-oxford text-white font-bold p-2 rounded-xl transition-all"
+                  className="bg-yinmn hover:bg-cadet text-white font-bold p-2 rounded-lg transition-all"
+                  aria-label="Adicionar registro ao histórico"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
@@ -494,21 +550,21 @@ Risco: ${risk}`;
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 bg-gray-50 border-t border-gray-150 flex flex-col sm:flex-row gap-2.5">
+        <div className="flex flex-col gap-2 border-t border-sky-100 bg-white p-3 sm:flex-row">
           {/* Copiar Resumo */}
           <button
             onClick={handleCopySummary}
-            className="flex-1 text-xs bg-white hover:bg-gray-100 text-gray-700 font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-gray-200 active:scale-[0.98]"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-sky-100 bg-white px-4 py-2.5 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-sky-50 active:scale-[0.98]"
           >
             {copiedSummary ? (
               <>
-                <Check className="w-4 h-4 text-[#00995D]" />
-                <span className="text-[#00995D]">Resumo Copiado!</span>
+                <Check className="w-4 h-4 text-emerald-600" />
+                <span className="text-emerald-600">Resumo copiado</span>
               </>
             ) : (
               <>
                 <ClipboardCheck className="w-4 h-4" />
-                <span>Copiar Ficha Resumida</span>
+                <span>Copiar resumo</span>
               </>
             )}
           </button>
@@ -516,10 +572,10 @@ Risco: ${risk}`;
           {/* Editar Cadastro */}
           <button
             onClick={() => onEdit(employee)}
-            className="flex-1 text-xs bg-[#00995D] hover:bg-[#00804e] text-white font-extrabold py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md shadow-[#00995d]/10 active:scale-[0.98]"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-yinmn px-4 py-2.5 text-[11px] font-bold text-white shadow-[0_8px_18px_rgba(99,142,203,0.22)] transition-all hover:bg-cadet active:scale-[0.98]"
           >
             <FileEdit className="w-4 h-4" />
-            <span>Editar Cadastro</span>
+            <span>Editar cadastro</span>
           </button>
         </div>
       </div>

@@ -90,9 +90,9 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
 
   if (employees.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-sky-100 p-12 text-center shadow-[0_4px_20px_-4px_rgba(23,105,170,0.06)]">
+      <div className="bg-white rounded-[20px] border border-sky-100 p-12 text-center shadow-[0_10px_28px_rgba(57,88,134,0.06)]">
         <HelpCircle className="w-12 h-12 text-sky-200 mx-auto mb-3" />
-        <h3 className="text-base font-extrabold text-[#1F1A2C] mb-1">Nenhum funcionário encontrado</h3>
+        <h3 className="text-base font-bold text-oxford mb-1">Nenhum funcionário encontrado</h3>
         <p className="text-xs text-slate-400 font-semibold max-w-md mx-auto">
           Não há registros correspondentes aos filtros selecionados. Tente ajustar os parâmetros na barra de pesquisa.
         </p>
@@ -101,7 +101,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-xl border border-sky-100 shadow-[0_4px_20px_-4px_rgba(23,105,170,0.06)] overflow-hidden flex flex-col">
+    <div className="bg-white rounded-[20px] border border-sky-100 shadow-[0_10px_28px_rgba(57,88,134,0.06)] overflow-hidden flex flex-col">
       <div className="overflow-x-auto no-scrollbar">
         <table className="w-full min-w-[1100px] border-collapse">
           {/* Header */}
@@ -112,14 +112,14 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
               <SortHeader field="cargo" label="Cargo" />
               <SortHeader field="zona" label="Zona" />
               <SortHeader field="turno" label="Turno" />
-              <th className="py-3.5 px-4 text-left text-[10px] font-black uppercase tracking-wider text-slate-400 bg-[#FAF9FF]">Idiomas</th>
+              <th className="py-3.5 px-4 text-left text-[10px] font-black uppercase tracking-wider text-slate-400 bg-sky-50/60">Idiomas</th>
               <SortHeader field="statusFuncionario" label="Status" />
-              <th className="py-3.5 px-4 text-left text-[10px] font-black uppercase tracking-wider text-slate-400 bg-[#FAF9FF]">Admissão</th>
-              <th className="py-3.5 px-4 text-left text-[10px] font-black uppercase tracking-wider text-slate-400 bg-[#FAF9FF]">Término</th>
+              <th className="py-3.5 px-4 text-left text-[10px] font-black uppercase tracking-wider text-slate-400 bg-sky-50/60">Admissão</th>
+              <th className="py-3.5 px-4 text-left text-[10px] font-black uppercase tracking-wider text-slate-400 bg-sky-50/60">Término</th>
               <SortHeader field="diasRestantes" label="Dias" />
               <SortHeader field="risco" label="Risco" />
-              <th className="py-3.5 px-4 text-center text-[10px] font-black uppercase tracking-wider text-slate-400 bg-[#FAF9FF]">Pendências</th>
-              <th className="py-3.5 px-4 text-center text-[10px] font-black uppercase tracking-wider text-slate-400 bg-[#FAF9FF] sticky right-0 shadow-l z-10">Ações</th>
+              <th className="py-3.5 px-4 text-center text-[10px] font-black uppercase tracking-wider text-slate-400 bg-sky-50/60">Pendências</th>
+              <th className="py-3.5 px-4 text-center text-[10px] font-black uppercase tracking-wider text-slate-400 bg-sky-50/60 sticky right-0 shadow-l z-10">Ações</th>
             </tr>
           </thead>
 
@@ -153,7 +153,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                   </td>
 
                   {/* Nome */}
-                  <td className="py-3.5 px-4 font-extrabold text-[#1F1A2C] whitespace-nowrap">
+                  <td className="py-3.5 px-4 font-bold text-oxford whitespace-nowrap">
                     {emp.nome}
                   </td>
 
@@ -271,7 +271,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
       </div>
 
       {/* Table Footer Stats */}
-      <div className="p-4 bg-[#FAF9FF] border-t border-sky-100/50 flex flex-col sm:flex-row items-center justify-between gap-2.5">
+      <div className="p-4 bg-sky-50/60 border-t border-sky-100/50 flex flex-col sm:flex-row items-center justify-between gap-2.5">
         <span className="text-xs text-slate-400 font-bold">
           Exibindo {employees.length} de {employees.length} registros filtrados
         </span>

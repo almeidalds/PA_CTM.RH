@@ -7,6 +7,7 @@ import { getToday, getMonthOffset } from "../utils/dateUtils";
 import { RhEmployee, Substitution, ContractRenewal, SystemAlert, TimelineEvent, SubstitutionReason, SubstitutionStatus, ContractRenewalStatus, SystemAlertStatus } from "../types/rh";
 import { formatarDataBR, formatarDataCurta, calcularDiasRestantes } from "../utils/dateUtils";
 import { calcularStatusFerias, calcularDiasVendidos, calcularDiasTirados } from "../utils/vacationUtils";
+import { normalizarTurno } from "../constants/turnos";
 
 const SUBSTITUTIONS_KEY = "ctm_rh_substitutions";
 const TIMELINE_EVENTS_KEY = "ctm_rh_timeline_events";
@@ -26,7 +27,7 @@ function obterSubstituicoesIniciais(): Substitution[] {
       dias: 30,
       idioma: "Português para Estrangeiros",
       zona: "Zona Oeste",
-      turno: "Tarde",
+      turno: "Turno 2",
       substituto: "",
       status: "Sem substituto",
       observacoes: "Férias em andamento iniciadas no dia 01/07. Nenhuma cobertura cadastrada até o momento. Alto risco operacional para a Zona Oeste."
@@ -40,7 +41,7 @@ function obterSubstituicoesIniciais(): Substitution[] {
       dias: 30,
       idioma: "Espanhol",
       zona: "Zona Leste",
-      turno: "Tarde",
+      turno: "Turno 2",
       substituto: "Amanda Ribeiro Lima",
       status: "Substituto definido",
       observacoes: "Amanda Lima foi remanejada temporariamente para apoiar as aulas na Zona Leste durante as férias de Juliana."
@@ -54,7 +55,7 @@ function obterSubstituicoesIniciais(): Substitution[] {
       dias: 5,
       idioma: "Japonês",
       zona: "Zona Leste",
-      turno: "Manhã",
+      turno: "Turno 1",
       substituto: "",
       status: "Pendente",
       observacoes: "Participação no simpósio nacional de metodologias ágeis de ensino. Cobertura ainda pendente de validação."
@@ -68,7 +69,7 @@ function obterSubstituicoesIniciais(): Substitution[] {
       dias: 30,
       idioma: "Francês",
       zona: "Zona Oeste",
-      turno: "Noite",
+      turno: "Turno 3",
       substituto: "",
       status: "Em análise",
       observacoes: "Análise de viabilidade para contratação temporária ou fusão temporária das turmas noturnas de Francês."
@@ -82,7 +83,14 @@ function obterSubstituicoesIniciais(): Substitution[] {
 export function obterSubstituicoes(): Substitution[] {
   try {
     const stored = localStorage.getItem(SUBSTITUTIONS_KEY);
-    if (stored) return JSON.parse(stored);
+    if (stored) {
+      const substituicoes = (JSON.parse(stored) as Substitution[]).map((substituicao) => ({
+        ...substituicao,
+        turno: normalizarTurno(substituicao.turno),
+      }));
+      salvarSubstituicoes(substituicoes);
+      return substituicoes;
+    }
   } catch (err) {
     console.error("Erro ao obter substituições do localStorage:", err);
   }
@@ -434,7 +442,7 @@ export function gerarAlertasSistema(
         dataCriacao: hojeStr,
         prazoRecomendado: quinzeDias,
         status: "Novo",
-        acaoRecomendada: "Especificar se o instrutor ministra aulas no período da Manhã, Tarde ou Noite."
+        acaoRecomendada: "Especificar se o instrutor atua no Turno 1, Turno 2 ou Turno 3."
       });
     }
     if (!emp.idiomas || emp.idiomas.length === 0) {

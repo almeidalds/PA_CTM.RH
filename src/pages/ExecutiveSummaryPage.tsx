@@ -129,8 +129,8 @@ export const ExecutiveSummaryPage: React.FC<Props> = ({ employees }) => {
           <div className="bg-white p-5 rounded-2xl border border-sky-100 shadow-sm flex flex-col justify-between">
             <div className="flex items-center justify-between mb-4">
               <span className="text-xs font-bold text-slate-500 uppercase">Qualidade dos Dados</span>
-              <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
-                <CheckCircle2 className="w-4 h-4 text-blue-600" />
+              <div className="w-8 h-8 rounded-full bg-sky-50 flex items-center justify-center">
+                <CheckCircle2 className="w-4 h-4 text-sky-600" />
               </div>
             </div>
             <p className="text-3xl font-black text-oxford">{Math.max(0, 100 - (stats.pendencias/stats.ativos*100)).toFixed(1)}%</p>
