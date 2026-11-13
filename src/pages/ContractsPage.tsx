@@ -5,25 +5,15 @@
 
 import React, { useState, useEffect } from "react";
 import {
+  CalendarDays,
   FileText,
-  Clock,
-  UserCheck,
+  MessageSquareText,
   Search,
-  CheckCircle,
-  XCircle,
-  AlertOctagon,
-  Calendar,
-  AlertTriangle,
-  User,
-  Check,
-  Edit,
-  ClipboardList,
   X
 } from "lucide-react";
 import { RhEmployee, ContractRenewal, ContractRenewalStatus } from "../types/rh";
 import { formatarDataBR, calcularDiasRestantes } from "../utils/dateUtils";
 import { obterContratos } from "../services/additionalDataSource";
-import { ContractSummaryCard } from "../components/SummaryCard";
 
 interface ContractsPageProps {
   employees: RhEmployee[];
@@ -33,6 +23,19 @@ interface ContractsPageProps {
   onClearDefaultSearch?: () => void;
 }
 
+type DeadlineFilter = "all" | "expired" | "30days" | "31to90" | "missing";
+
+const renewalStatusOptions: ContractRenewalStatus[] = [
+  "Não iniciado",
+  "Em análise",
+  "Aguardando coordenação",
+  "Aguardando aprovação",
+  "Renovado",
+  "Não renovar",
+  "Encerrado",
+  "Urgente",
+];
+
 export const ContractsPage: React.FC<ContractsPageProps> = ({
   employees,
   onUpdateEmployee,
@@ -41,7 +44,8 @@ export const ContractsPage: React.FC<ContractsPageProps> = ({
   onClearDefaultSearch
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [deadlineFilter, setDeadlineFilter] =
+    useState<DeadlineFilter>("all");
   
   // Modal / form states for adding observations
   const [editingContract, setEditingContract] = useState<ContractRenewal | null>(null);
@@ -56,37 +60,6 @@ export const ContractsPage: React.FC<ContractsPageProps> = ({
   }, [defaultSearch]);
 
   const contratos = obterContratos(employees);
-
-  // Regras de Alerta de Contrato
-  // 0 a 15 dias: Crítico
-  // 16 a 30 dias: Alto
-  // 31 a 60 dias: Médio
-  // 61 a 90 dias: Baixo
-  // Sem data de término: Cadastro incompleto
-  const obterAlertaContrato = (c: ContractRenewal) => {
-    if (!c.dataTerminoReal) {
-      return { label: "Incompleto", color: "text-yinmn border-sky-100", bg: "bg-sky-50" };
-    }
-    if (c.diasRestantes === null) {
-      return { label: "Incompleto", color: "text-yinmn border-sky-100", bg: "bg-sky-50" };
-    }
-    if (c.diasRestantes < 0) {
-      return { label: "Expirado", color: "text-red-700 border-red-200 font-black", bg: "bg-red-50" };
-    }
-    if (c.diasRestantes <= 15) {
-      return { label: "Crítico", color: "text-red-700 border-red-200 animate-pulse", bg: "bg-red-50" };
-    }
-    if (c.diasRestantes <= 30) {
-      return { label: "Alto", color: "text-orange-700 border-orange-200", bg: "bg-orange-50" };
-    }
-    if (c.diasRestantes <= 60) {
-      return { label: "Médio", color: "text-amber-700 border-amber-200", bg: "bg-amber-50" };
-    }
-    if (c.diasRestantes <= 90) {
-      return { label: "Baixo", color: "text-sky-700 border-sky-200", bg: "bg-sky-50" };
-    }
-    return { label: "Sob Controle", color: "text-emerald-700 border-emerald-200", bg: "bg-emerald-50" };
-  };
 
   const handleUpdateStatus = (c: ContractRenewal, newStatus: ContractRenewalStatus) => {
     // Achar o funcionário correspondente
@@ -130,283 +103,294 @@ export const ContractsPage: React.FC<ContractsPageProps> = ({
     setAnalystName(c.responsavelAnalise || "");
   };
 
-  // KPIs Calculations
-  const v30 = contratos.filter((c) => c.diasRestantes !== null && c.diasRestantes >= 0 && c.diasRestantes <= 30).length;
-  const v60 = contratos.filter((c) => c.diasRestantes !== null && c.diasRestantes > 30 && c.diasRestantes <= 60).length;
-  const v90 = contratos.filter((c) => c.diasRestantes !== null && c.diasRestantes > 60 && c.diasRestantes <= 90).length;
-  const totalCriticos = contratos.filter((c) => {
-    const r = obterAlertaContrato(c);
-    return r.label === "Crítico" || r.label === "Incompleto";
-  }).length;
+  const totalVencidos = contratos.filter(
+    (contract) =>
+      contract.dataTerminoReal &&
+      contract.diasRestantes !== null &&
+      contract.diasRestantes < 0,
+  ).length;
+  const totalProximos30Dias = contratos.filter(
+    (contract) =>
+      contract.dataTerminoReal &&
+      contract.diasRestantes !== null &&
+      contract.diasRestantes >= 0 &&
+      contract.diasRestantes <= 30,
+  ).length;
+  const totalSemData = contratos.filter(
+    (contract) => !contract.dataTerminoReal,
+  ).length;
 
-  const totalEmAnalise = contratos.filter((c) => c.statusRenovacao === "Em análise").length;
-  const totalAguardandoAprovacao = contratos.filter((c) => c.statusRenovacao === "Aguardando aprovação").length;
-  const totalRenovados = contratos.filter((c) => c.statusRenovacao === "Renovado").length;
-  const totalNaoRenovar = contratos.filter((c) => c.statusRenovacao === "Não renovar").length;
+  const filters: { id: DeadlineFilter; label: string; count: number }[] = [
+    { id: "all", label: "Todos", count: contratos.length },
+    { id: "expired", label: "Vencidos", count: totalVencidos },
+    { id: "30days", label: "Até 30 dias", count: totalProximos30Dias },
+    {
+      id: "31to90",
+      label: "31 a 90 dias",
+      count: contratos.filter(
+        (contract) =>
+          contract.dataTerminoReal &&
+          contract.diasRestantes !== null &&
+          contract.diasRestantes > 30 &&
+          contract.diasRestantes <= 90,
+      ).length,
+    },
+    { id: "missing", label: "Sem data", count: totalSemData },
+  ];
 
-  // Filtragem dos contratos
-  const filteredContratos = contratos.filter((c) => {
-    const matchesSearch = c.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.cargo.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = selectedStatus === "all" || c.statusRenovacao === selectedStatus;
+  const normalizedSearch = searchTerm.trim().toLocaleLowerCase("pt-BR");
+  const filteredContratos = contratos.filter((contract) => {
+    const matchesSearch =
+      !normalizedSearch ||
+      contract.nome.toLocaleLowerCase("pt-BR").includes(normalizedSearch) ||
+      contract.cargo.toLocaleLowerCase("pt-BR").includes(normalizedSearch);
+    const days = contract.diasRestantes;
+    const matchesDeadline =
+      deadlineFilter === "all" ||
+      (deadlineFilter === "expired" &&
+        Boolean(contract.dataTerminoReal) &&
+        days !== null &&
+        days < 0) ||
+      (deadlineFilter === "30days" &&
+        Boolean(contract.dataTerminoReal) &&
+        days !== null &&
+        days >= 0 &&
+        days <= 30) ||
+      (deadlineFilter === "31to90" &&
+        Boolean(contract.dataTerminoReal) &&
+        days !== null &&
+        days > 30 &&
+        days <= 90) ||
+      (deadlineFilter === "missing" && !contract.dataTerminoReal);
 
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesDeadline;
   });
+
+  const renderStatusSelect = (contract: ContractRenewal) => (
+    <select
+      aria-label={`Status da renovação de ${contract.nome}`}
+      value={contract.statusRenovacao}
+      onChange={(event) => {
+        const status = renewalStatusOptions.find(
+          (option) => option === event.currentTarget.value,
+        );
+        if (status) handleUpdateStatus(contract, status);
+      }}
+      className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-semibold text-slate-700 outline-none transition focus:border-yinmn focus:ring-2 focus:ring-sky-100"
+    >
+      {renewalStatusOptions.map((status) => (
+        <option key={status} value={status}>{status}</option>
+      ))}
+    </select>
+  );
 
   return (
     <div className="space-y-6">
-      {/* Title */}
-      <div className="rounded-[22px] border border-white bg-gradient-to-br from-[#d5deef] to-[#f0f3fa] p-5 shadow-[0_12px_30px_rgba(57,88,134,0.07)]">
-        <h2 className="text-lg sm:text-xl font-extrabold text-oxford flex items-center gap-2.5">
-          <FileText className="w-5 h-5 text-yinmn" />
-          <span>Gestão de Contratos & Renovação</span>
-        </h2>
-        <p className="text-xs text-slate-400 font-medium mt-1">
-          Acompanhe o ciclo de vigência e as tomadas de decisões para extensão ou encerramento dos termos de instrutores.
+      <header className="flex flex-col gap-3 rounded-2xl border border-sky-100 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="rounded-xl bg-sky-50 p-2 text-yinmn">
+            <FileText className="h-5 w-5" />
+          </span>
+          <div>
+            <h2 className="text-lg font-extrabold text-oxford">Prazos contratuais</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Veja o que vence primeiro e atualize a situação da renovação.
+            </p>
+          </div>
+        </div>
+        <p className="text-sm font-medium text-slate-500">
+          {filteredContratos.length} de {contratos.length} contratos
         </p>
-      </div>
+      </header>
 
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-        <div className="p-3 bg-rose-50 rounded-2xl border border-rose-100">
-          <span className="text-[9px] uppercase font-black text-rose-600 tracking-wider block">Críticos</span>
-          <span className="text-lg font-extrabold text-oxford block mt-0.5">{totalCriticos}</span>
-        </div>
+      <section aria-label="Filtrar por prazo" className="flex flex-wrap gap-2">
+        {filters.map((filter) => {
+          const selected = deadlineFilter === filter.id;
+          return (
+            <button
+              key={filter.id}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => setDeadlineFilter(filter.id)}
+              className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-semibold transition ${
+                selected
+                  ? "border-yinmn bg-yinmn text-white shadow-sm"
+                  : "border-slate-200 bg-white text-slate-600 hover:border-sky-300 hover:bg-sky-50"
+              }`}
+            >
+              {filter.label}
+              <span className={`rounded-full px-2 py-0.5 text-xs ${
+                selected ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
+              }`}>
+                {filter.count}
+              </span>
+            </button>
+          );
+        })}
+      </section>
 
-        <div className="p-3 bg-orange-50 rounded-2xl border border-orange-100">
-          <span className="text-[9px] uppercase font-black text-orange-600 tracking-wider block">Vence em 30d</span>
-          <span className="text-lg font-extrabold text-oxford block mt-0.5">{v30}</span>
-        </div>
-
-        <div className="p-3 bg-amber-50 rounded-2xl border border-amber-100">
-          <span className="text-[9px] uppercase font-black text-amber-600 tracking-wider block">Vence em 60d</span>
-          <span className="text-lg font-extrabold text-oxford block mt-0.5">{v60}</span>
-        </div>
-
-        <div className="p-3 bg-sky-50 rounded-2xl border border-sky-100">
-          <span className="text-[9px] uppercase font-black text-sky-600 tracking-wider block">Vence em 90d</span>
-          <span className="text-lg font-extrabold text-oxford block mt-0.5">{v90}</span>
-        </div>
-
-        <div className="p-3 bg-sky-50 rounded-2xl border border-sky-100">
-          <span className="text-[9px] uppercase font-black text-yinmn tracking-wider block">Em Análise</span>
-          <span className="text-lg font-extrabold text-oxford block mt-0.5">{totalEmAnalise}</span>
-        </div>
-
-        <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200">
-          <span className="text-[9px] uppercase font-black text-slate-600 tracking-wider block">Aguard. Aprov.</span>
-          <span className="text-lg font-extrabold text-oxford block mt-0.5">{totalAguardandoAprovacao}</span>
-        </div>
-
-        <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-100">
-          <span className="text-[9px] uppercase font-black text-emerald-600 tracking-wider block">Renovados</span>
-          <span className="text-lg font-extrabold text-emerald-700 block mt-0.5">{totalRenovados}</span>
-        </div>
-
-        <div className="p-3 bg-red-100/50 rounded-2xl border border-red-200">
-          <span className="text-[9px] uppercase font-black text-red-700 tracking-wider block">Não Renovar</span>
-          <span className="text-lg font-extrabold text-red-900 block mt-0.5">{totalNaoRenovar}</span>
-        </div>
-      </div>
-
-      {/* Filter bar */}
-      <div className="bg-white p-4 rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(57,88,134,0.06)] flex flex-col md:flex-row gap-3">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+      <section className="rounded-2xl border border-sky-100 bg-white p-4 shadow-sm">
+        <label className="relative block">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
-            type="text"
-            placeholder="Buscar por instrutor ou cargo de ensino..."
+            type="search"
+            aria-label="Buscar contrato por funcionário ou cargo"
+            placeholder="Buscar funcionário ou cargo"
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              if (e.target.value === "" && onClearDefaultSearch) {
+            onChange={(event) => {
+              setSearchTerm(event.currentTarget.value);
+              if (!event.currentTarget.value && onClearDefaultSearch) {
                 onClearDefaultSearch();
               }
             }}
-            className="w-full text-xs pl-10 pr-10 py-2.5 rounded-xl border border-sky-100 focus:outline-none focus:border-jordy focus:ring-1 focus:ring-jordy text-slate-700"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-10 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-yinmn focus:bg-white focus:ring-2 focus:ring-sky-100"
           />
           {searchTerm && (
             <button
+              type="button"
+              aria-label="Limpar busca"
               onClick={() => {
                 setSearchTerm("");
-                if (onClearDefaultSearch) onClearDefaultSearch();
+                onClearDefaultSearch?.();
               }}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-              title="Limpar busca"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
             >
-              <X className="w-4.5 h-4.5" />
+              <X className="h-4 w-4" />
             </button>
           )}
+        </label>
+      </section>
+
+      <section className="overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-sm">
+        <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
+          <div>
+            <h3 className="font-bold text-oxford">Contratos</h3>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Altere o status pelo seletor; use “Parecer” para registrar detalhes.
+            </p>
+          </div>
+          <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+            {filteredContratos.length}
+          </span>
         </div>
-        
-        <select
-          value={selectedStatus}
-          onChange={(e) => setSelectedStatus(e.target.value)}
-          className="text-xs font-bold text-slate-600 bg-slate-50 border border-sky-100 rounded-xl px-4 py-2.5 cursor-pointer focus:outline-none"
-        >
-          <option value="all">Status de Renovação (Todos)</option>
-          <option value="Não iniciado">Não iniciado</option>
-          <option value="Em análise">Em análise</option>
-          <option value="Aguardando coordenação">Aguardando coordenação</option>
-          <option value="Aguardando aprovação">Aguardando aprovação</option>
-          <option value="Renovado">Renovado</option>
-          <option value="Não renovar">Não renovar</option>
-          <option value="Encerrado">Encerrado</option>
-          <option value="Urgente">Urgente</option>
-        </select>
-      </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(57,88,134,0.06)] overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-sky-100 text-[10px] uppercase font-black text-slate-400 tracking-wider">
-                <th className="py-4 px-5">Instrutor</th>
-                <th className="py-4 px-4">Lotação / Campus</th>
-                <th className="py-4 px-4">Admissão</th>
-                <th className="py-4 px-4">Término Contrato</th>
-                <th className="py-4 px-4 text-center">Dias Restantes</th>
-                <th className="py-4 px-4">Status de Renovação</th>
-                <th className="py-4 px-4">Responsável Decisão</th>
-                <th className="py-4 px-4">Data Limite</th>
-                <th className="py-4 px-4 text-center">Risco</th>
-                <th className="py-4 px-5 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-sky-100 text-xs text-oxford">
-              {filteredContratos.map((c) => {
-                const risco = obterAlertaContrato(c);
-                const originalEmployee = employees.find((e) => e.recordId === c.recordId);
+        {filteredContratos.length === 0 ? (
+          <div className="px-5 py-12 text-center">
+            <p className="font-semibold text-slate-700">Nenhum contrato encontrado</p>
+            <p className="mt-1 text-sm text-slate-500">
+              Tente outra busca ou selecione um prazo diferente.
+            </p>
+            {(searchTerm || deadlineFilter !== "all") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm("");
+                  setDeadlineFilter("all");
+                  onClearDefaultSearch?.();
+                }}
+                className="mt-4 rounded-lg px-3 py-2 text-sm font-semibold text-yinmn hover:bg-sky-50"
+              >
+                Limpar filtros
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {filteredContratos.map((contract) => {
+              const originalEmployee = employees.find(
+                (employee) => employee.recordId === contract.recordId,
+              );
+              const days = contract.diasRestantes;
+              const deadlineStyle = !contract.dataTerminoReal || days === null
+                ? "bg-amber-50 text-amber-800"
+                : days < 0
+                  ? "bg-rose-50 text-rose-700"
+                  : days <= 30
+                    ? "bg-amber-50 text-amber-800"
+                    : "bg-emerald-50 text-emerald-700";
+              const deadlineLabel = !contract.dataTerminoReal
+                ? "Data não informada"
+                : days === null
+                  ? "Prazo indisponível"
+                : days === 0
+                  ? "Vence hoje"
+                  : days < 0
+                    ? `Vencido há ${Math.abs(days)} dias`
+                    : `Vence em ${days} dias`;
 
-                return (
-                  <tr key={c.recordId} className="hover:bg-sky-50 transition-colors">
-                    {/* Name */}
-                    <td className="py-4 px-5">
-                      <div
-                        onClick={() => originalEmployee && onSelectEmployee(originalEmployee)}
-                        className="font-extrabold text-oxford hover:text-yinmn cursor-pointer"
-                      >
-                        {c.nome}
-                      </div>
-                      <span className="text-[10px] text-slate-400 font-bold block">{c.cargo}</span>
-                    </td>
+              return (
+                <article
+                  key={contract.recordId}
+                  className="grid gap-4 p-4 transition hover:bg-slate-50/70 md:grid-cols-[minmax(0,1.2fr)_minmax(150px,0.8fr)_minmax(180px,0.9fr)_auto] md:items-center md:px-5"
+                >
+                  <div className="min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => originalEmployee && onSelectEmployee(originalEmployee)}
+                      className="text-left font-semibold text-oxford hover:text-yinmn hover:underline"
+                    >
+                      {contract.nome}
+                    </button>
+                    <p className="mt-0.5 truncate text-xs text-slate-500">
+                      {contract.cargo || "Cargo não informado"}
+                    </p>
+                  </div>
 
-                    {/* Zone/Shift */}
-                    <td className="py-4 px-4 space-y-0.5">
-                      <span className="font-bold text-slate-600 text-[11px] block">{c.zona || "Não vinculada"}</span>
-                      <span className="text-[10px] text-slate-400 font-semibold">{c.turno}</span>
-                    </td>
-
-                    {/* Admission */}
-                    <td className="py-4 px-4 font-semibold text-slate-500">
-                      {formatarDataBR(c.dataAdmissao)}
-                    </td>
-
-                    {/* Expiry */}
-                    <td className="py-4 px-4 font-extrabold text-oxford">
-                      {c.dataTerminoReal ? formatarDataBR(c.dataTerminoReal) : (
-                        <span className="text-yinmn">Não cadastrada</span>
-                      )}
-                    </td>
-
-                    {/* Days Left */}
-                    <td className="py-4 px-4 text-center font-black">
-                      {c.diasRestantes !== null ? (
-                        <span className={c.diasRestantes <= 30 ? "text-rose-600" : "text-slate-600"}>
-                          {c.diasRestantes}d
-                        </span>
-                      ) : (
-                        <span className="text-yinmn">--</span>
-                      )}
-                    </td>
-
-                    {/* Renewal Status */}
-                    <td className="py-4 px-4">
-                      <span className={`inline-block px-2.5 py-1 rounded-full text-[9px] font-black uppercase ${
-                        c.statusRenovacao === "Renovado"
-                          ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                          : c.statusRenovacao === "Não renovar" || c.statusRenovacao === "Encerrado"
-                          ? "bg-rose-50 text-rose-600 border border-rose-100"
-                          : c.statusRenovacao === "Urgente"
-                          ? "bg-red-50 text-red-600 border border-red-100 animate-pulse"
-                          : "bg-slate-100 text-slate-600 border border-slate-200"
-                      }`}>
-                        {c.statusRenovacao}
+                  <div>
+                    <p className="text-xs text-slate-500">Vencimento</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 font-semibold text-slate-700">
+                        <CalendarDays className="h-4 w-4 text-slate-400" />
+                        {contract.dataTerminoReal
+                          ? formatarDataBR(contract.dataTerminoReal)
+                          : "Sem data"}
                       </span>
-                    </td>
-
-                    {/* Decision Analyst */}
-                    <td className="py-4 px-4 font-semibold text-slate-500">{c.responsavelAnalise}</td>
-
-                    {/* Decision Deadline */}
-                    <td className="py-4 px-4 font-semibold text-slate-500">{c.dataLimiteDecisao ? formatarDataBR(c.dataLimiteDecisao) : "--"}</td>
-
-                    {/* Alert Risk */}
-                    <td className="py-4 px-4 text-center">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[9px] font-black border ${risco.color} ${risco.bg}`}>
-                        {risco.label}
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${deadlineStyle}`}>
+                        {deadlineLabel}
                       </span>
-                    </td>
+                    </div>
+                  </div>
 
-                    {/* Action Panel Buttons */}
-                    <td className="py-4 px-5 text-right space-y-1">
-                      <div className="flex justify-end gap-1.5 flex-wrap max-w-[200px] ml-auto">
-                        <button
-                          onClick={() => handleUpdateStatus(c, "Em análise")}
-                          className="text-[9px] bg-slate-50 hover:bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200 font-bold"
-                          title="Analisar"
-                        >
-                          Analisar
-                        </button>
-                        <button
-                          onClick={() => handleUpdateStatus(c, "Aguardando aprovação")}
-                          className="text-[9px] bg-amber-50 hover:bg-amber-100 text-amber-700 px-2 py-0.5 rounded border border-amber-200 font-bold"
-                        >
-                          Aprovação
-                        </button>
-                        <button
-                          onClick={() => handleUpdateStatus(c, "Renovado")}
-                          className="text-[9px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200 font-bold"
-                        >
-                          Renovar
-                        </button>
-                        <button
-                          onClick={() => handleUpdateStatus(c, "Não renovar")}
-                          className="text-[9px] bg-rose-50 hover:bg-rose-100 text-rose-700 px-2 py-0.5 rounded border border-rose-200 font-bold cursor-pointer"
-                        >
-                          Negar
-                        </button>
-                        <button
-                          onClick={() => handleOpenEditModal(c)}
-                          className="text-[9px] bg-sky-50 hover:bg-sky-100/60 text-yinmn px-2 py-0.5 rounded border border-sky-100/60 font-bold cursor-pointer"
-                          title="Adicionar Observação ou Parecer"
-                        >
-                          Opinião
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                  <label className="block space-y-1.5 text-xs font-medium text-slate-500">
+                    Status da renovação
+                    {renderStatusSelect(contract)}
+                  </label>
 
-              {filteredContratos.length === 0 && (
-                <tr>
-                  <td colSpan={10} className="py-10 text-center text-slate-400 font-semibold">
-                    <span>Nenhum contrato ativo corresponde aos filtros selecionados.</span>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                  <div className="flex items-center justify-between gap-3 md:justify-end">
+                    <p className="min-w-0 text-xs text-slate-500 md:hidden">
+                      {contract.responsavelAnalise || "Responsável a definir"}
+                      {contract.dataLimiteDecisao
+                        ? ` · decisão até ${formatarDataBR(contract.dataLimiteDecisao)}`
+                        : ""}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditModal(contract)}
+                      className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:border-yinmn hover:bg-sky-50 hover:text-yinmn"
+                    >
+                      <MessageSquareText className="h-4 w-4" />
+                      Parecer
+                    </button>
+                    <p className="hidden text-right text-xs text-slate-500 md:block">
+                      {contract.responsavelAnalise || "A definir"}
+                      <span className="mt-1 block">
+                        Decisão até {contract.dataLimiteDecisao
+                          ? formatarDataBR(contract.dataLimiteDecisao)
+                          : "não definida"}
+                      </span>
+                    </p>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       {/* FLYOUT MODAL — EDITAR PARECER / DATA LIMITE */}
       {editingContract && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-[26px] border border-sky-100 max-w-md w-full p-6 shadow-[0_24px_70px_rgba(57,88,134,0.24)] relative text-xs">
+          <div className="bg-white rounded-[26px] border border-sky-100 max-w-md w-full p-6 shadow-[0_24px_70px_rgba(0,48,87,0.24)] relative text-xs">
             <h3 className="text-sm font-black uppercase tracking-wider text-oxford mb-4">
               Parecer de Renovação Contratual
             </h3>

@@ -5,6 +5,38 @@
  */
 
 export const dataSourcesInfo = {
+  "ctmbrasi_efetivarcontratacaofutura": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "",
+    "dataSourceType": "Dataverse",
+    "apis": {
+      "ctmbrasi_EfetivarContratacaoFutura": {
+        "path": "/api/data/v9.2/ctmbrasi_rhcontratacoesfuturases({id})/Microsoft.Dynamics.CRM.ctmbrasi_EfetivarContratacaoFutura",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "guid"
+          },
+          {
+            "name": "DataRealInicio",
+            "in": "body",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
   "ctmbrasi_employeerecordses": {
     "tableId": "",
     "version": "",
@@ -16,6 +48,13 @@ export const dataSourcesInfo = {
     "tableId": "",
     "version": "",
     "primaryKey": "ctmbrasi_rhcontractrenewalsid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
+  "ctmbrasi_rhcontratacoesfuturases": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "ctmbrasi_rhcontratacoesfuturasid",
     "dataSourceType": "Dataverse",
     "apis": {}
   },

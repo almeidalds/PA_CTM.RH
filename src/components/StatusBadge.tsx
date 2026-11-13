@@ -17,10 +17,10 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
 
   if (normalized === "Ativo") {
     bgClass = "bg-emerald-50 text-emerald-700 border-emerald-200";
-    dotClass = "bg-[#00995D]";
+    dotClass = "bg-emerald-600";
   } else if (normalized === "Encerrado") {
     bgClass = "bg-rose-50 text-rose-700 border-rose-200";
-    dotClass = "bg-[#DC2626]";
+    dotClass = "bg-red-500";
   } else if (normalized === "A começar") {
     bgClass = "bg-sky-50 text-sky-700 border-sky-200";
     dotClass = "bg-sky-600";

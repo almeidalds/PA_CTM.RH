@@ -32,6 +32,12 @@ Set-ExecutionPolicy -Scope Process Bypass
 
 O script instala as dependências, verifica a Power Apps CLI, solicita o **Environment ID**, executa `pa app init` e valida o build.
 
+O `power.config.json` aponta `logoPath` para o ícone quadrado `logo/app-icon-512.png`, criado a partir do símbolo já usado na navegação. Depois de alterar esse caminho ou a imagem, publique novamente com `pa app push` para atualizar o ícone do aplicativo.
+
+## Compatibilidade do Power Apps Player
+
+Este projeto é um `CodeApp`. Code Apps não são compatíveis com o aplicativo **Power Apps para Windows**. Para usá-lo no computador, abra a URL publicada no navegador. Se o requisito for executá-lo dentro do player nativo do Windows, será necessário portar a experiência para uma Canvas App compatível; mudar `appType` no `power.config.json` não converte o projeto. Consulte a [documentação de limitações dos Code Apps](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/overview#limitations).
+
 ### Testar no Power Apps local host
 
 Terminal 1:
@@ -81,11 +87,42 @@ pac code push
 
 A CLI `pa` é o caminho mais novo e recomendado para os próximos passos.
 
-## Sobre os dados atuais
+## Dados e integração
 
-O aplicativo ainda usa os dados de demonstração e `localStorage` que já existiam no projeto. Isso permite publicar e validar a interface imediatamente, mas **não transforma esses dados em banco compartilhado**.
+Funcionários e catálogos são lidos do Dataverse pelos serviços gerados. Algumas funções preexistentes, como substituições e sobreposições do painel de alertas, ainda usam `localStorage` e não são compartilhadas entre usuários. A aba Contratações Futuras não usa dados simulados nem `localStorage`.
 
-Para uso real por várias pessoas, o próximo passo é ligar os módulos a tabelas do **Dataverse** usando a Power Apps CLI e os serviços TypeScript gerados. A estrutura foi preparada para isso com `@microsoft/power-apps`.
+## Contratações Futuras
+
+A tabela real configurada no projeto é `ctmbrasi_rhcontratacoesfuturas`, com conjunto `ctmbrasi_rhcontratacoesfuturases`. Ela é separada da tabela oficial `ctmbrasi_employeerecords`; registros pendentes não são incluídos nos carregamentos ou indicadores de funcionários ativos.
+
+O modelo gerado contém os 21 campos da planilha, status e fase. Os códigos de status usados pela interface vêm de `src/generated/models/Ctmbrasi_rhcontratacoesfuturasesModel.ts`:
+
+| Código gerado | Rótulo Dataverse | Rótulo na interface |
+| --- | --- | --- |
+| 583150000 | Aguardando Confirmação | Aguardando Confirmação |
+| 583150001 | Início Confirmado | Início Confirmado |
+| 583150002 | Data Adiada / Reagendada | Data Adiada / Reagendada |
+| 583150003 | Desistência / Cancelado | Desistência / Cancelado |
+
+O esquema gerado neste repositório ainda não oferece cargo/posição, responsável pelo acompanhamento, uma tabela de histórico dedicada, turno ou vários idiomas por contratação. A coluna Telefone é `IntegerType`, que não preserva zeros iniciais e não comporta telefones completos; a gravação rejeita valores que seriam truncados. Não invente nomes lógicos: defina as colunas/relacionamentos com o administrador do ambiente, gere novamente os serviços e atualize os mapeamentos.
+
+As alterações de data e status são registradas como linhas nas observações Dataverse. Isso não substitui auditoria imutável; habilite a auditoria Dataverse e crie uma tabela de histórico vinculada à contratação antes de depender desse registro para conformidade.
+
+A efetivação é chamada pelo app por meio da Custom API `ctmbrasi_EfetivarContratacaoFutura`. O app envia `Target` (registro da contratação) e `DataRealInicio` (`YYYY-MM-DD`); o servidor retorna `FuncionarioId` e `JaEfetivado`. A validação, criação/vínculo do funcionário e atualização da fase devem permanecer na operação transacional do Dataverse; não substitua isso por gravações sequenciais no cliente.
+
+**Verifique o alinhamento do esquema antes do primeiro teste.** O plug-in espera `ctmbrasi_cargo` e `ctmbrasi_zonalookup` (com alternativa de texto `ctmbrasi_zona`), mas o esquema gerado neste repositório contém o lookup de zona `ctmbrasi_zonas` e não contém cargo. Confirme os nomes no ambiente; se os campos já foram criados, atualize as fontes/tipos e os mapeamentos do app e teste primeiro em desenvolvimento. Sem cargo/posição e zona válidos, o plug-in deve rejeitar a efetivação.
+
+O botão só deve ser usado por usuários com permissão para executar a Custom API e para criar/atualizar os registros envolvidos. Teste também uma repetição da chamada, matrícula duplicada e dados incompletos; a repetição deve retornar o funcionário já vinculado, sem criar outro.
+
+Para reconectar uma tabela ou atualizar as fontes de dados do aplicativo, execute a CLI na pasta do Code App e selecione a tabela correspondente:
+
+```powershell
+pa app add data-source
+npm run typecheck
+npm run build
+```
+
+O arquivo Excel original não veio anexado a esta solicitação. A importação usa os 21 rótulos e a ordem descritos no pedido; sem uma coluna de grupo, registra o nome do arquivo como origem e mantém datas incompletas em observações, sem inventar dia/ano.
 
 ## `power.config.json`
 

@@ -1,31 +1,147 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Poppins", "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-  --color-oxford: #395886;
-  --color-cadet: #395886;
-  --color-yinmn: #638ecb;
-  --color-jordy: #8aaee0;
-  --color-sky-muted: #d5deef;
+  --font-sans: "Roboto Condensed", "Arial Narrow", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Roboto Condensed", "Arial Narrow", ui-sans-serif, system-ui, sans-serif;
 
-  /* A escala sky representa a paleta institucional azul usada em todo o sistema. */
-  --color-sky-50: #f0f3fa;
-  --color-sky-100: #d5deef;
-  --color-sky-200: #b1c9ef;
-  --color-sky-300: #8aaee0;
-  --color-sky-400: #638ecb;
-  --color-sky-500: #638ecb;
-  --color-sky-600: #395886;
-  --color-sky-700: #395886;
-  --color-sky-800: #395886;
-  --color-sky-900: #395886;
-  --color-sky-950: #395886;
+  /*
+   * Paleta oficial da Igreja (Communication Guide 4.2.5 / Unity).
+   * Os aliases legados permanecem para que os componentes existentes
+   * recebam o novo tema sem alterar sua estrutura ou comportamento.
+   */
+  --color-oxford: #212225;
+  --color-cadet: #007da5;
+  --color-yinmn: #006184;
+  --color-jordy: #01b6d1;
+  --color-sky-muted: #e0e2e2;
+
+  /* Superfícies neutras e escala azul institucional. */
+  --color-sky-50: #f7f8f8;
+  --color-sky-100: #e0e2e2;
+  --color-sky-200: #b0eefc;
+  --color-sky-300: #7de3f4;
+  --color-sky-400: #49cce6;
+  --color-sky-500: #01b6d1;
+  --color-sky-600: #007da5;
+  --color-sky-700: #006184;
+  --color-sky-800: #005175;
+  --color-sky-900: #003057;
+  --color-sky-950: #001c33;
+
+  --color-blue-50: #f7f8f8;
+  --color-blue-100: #e0e2e2;
+  --color-blue-200: #b0eefc;
+  --color-blue-300: #7de3f4;
+  --color-blue-400: #49cce6;
+  --color-blue-500: #01b6d1;
+  --color-blue-600: #007da5;
+  --color-blue-700: #006184;
+  --color-blue-800: #005175;
+  --color-blue-900: #003057;
+  --color-blue-950: #001c33;
+
+  /* Cinzas frios do site; o nível 400 usa Gray 35 para texto pequeno legível. */
+  --color-slate-50: #f7f8f8;
+  --color-slate-100: #eff0f0;
+  --color-slate-200: #e0e2e2;
+  --color-slate-300: #d0d3d3;
+  --color-slate-400: #676b6e;
+  --color-slate-500: #53575b;
+  --color-slate-600: #3a3d40;
+  --color-slate-700: #212225;
+  --color-slate-800: #181a1b;
+  --color-slate-900: #0d0f10;
+  --color-slate-950: #000000;
+
+  --color-gray-50: #f7f8f8;
+  --color-gray-100: #eff0f0;
+  --color-gray-200: #e0e2e2;
+  --color-gray-300: #d0d3d3;
+  --color-gray-400: #676b6e;
+  --color-gray-500: #53575b;
+  --color-gray-600: #3a3d40;
+  --color-gray-700: #212225;
+  --color-gray-800: #181a1b;
+  --color-gray-900: #0d0f10;
+  --color-gray-950: #000000;
+
+  /* Cores funcionais derivadas das escalas aprovadas. */
+  --color-emerald-50: #f2f8ee;
+  --color-emerald-100: #e4f0d6;
+  --color-emerald-200: #d3e952;
+  --color-emerald-300: #bed21e;
+  --color-emerald-400: #93c742;
+  --color-emerald-500: #50a83e;
+  --color-emerald-600: #318d43;
+  --color-emerald-700: #206b3f;
+  --color-emerald-800: #235c35;
+  --color-emerald-900: #173d24;
+  --color-emerald-950: #0b2314;
+
+  --color-green-50: #f2f8ee;
+  --color-green-100: #e4f0d6;
+  --color-green-200: #d3e952;
+  --color-green-300: #bed21e;
+  --color-green-400: #93c742;
+  --color-green-500: #50a83e;
+  --color-green-600: #318d43;
+  --color-green-700: #206b3f;
+  --color-green-800: #235c35;
+  --color-green-900: #173d24;
+  --color-green-950: #0b2314;
+
+  --color-amber-50: #fff8e1;
+  --color-amber-100: #ffedb3;
+  --color-amber-200: #ffd61a;
+  --color-amber-300: #ffb81c;
+  --color-amber-400: #faa61a;
+  --color-amber-500: #f68d2e;
+  --color-amber-600: #d45311;
+  --color-amber-700: #974a07;
+  --color-amber-800: #674730;
+  --color-amber-900: #4a2e1e;
+  --color-amber-950: #2c1b12;
+
+  --color-orange-50: #fff8e1;
+  --color-orange-100: #ffedb3;
+  --color-orange-200: #ffd61a;
+  --color-orange-300: #ffb81c;
+  --color-orange-400: #faa61a;
+  --color-orange-500: #f68d2e;
+  --color-orange-600: #d45311;
+  --color-orange-700: #974a07;
+  --color-orange-800: #674730;
+  --color-orange-900: #4a2e1e;
+  --color-orange-950: #2c1b12;
+
+  --color-rose-50: #fff1f4;
+  --color-rose-100: #ffe1e8;
+  --color-rose-200: #fda1b2;
+  --color-rose-300: #ff7591;
+  --color-rose-400: #fc4e6d;
+  --color-rose-500: #e10f5a;
+  --color-rose-600: #bd0057;
+  --color-rose-700: #a6004e;
+  --color-rose-800: #8f124a;
+  --color-rose-900: #7d003f;
+  --color-rose-950: #6e0d33;
+
+  --color-red-50: #fff1f0;
+  --color-red-100: #ffdad6;
+  --color-red-200: #ffaaa3;
+  --color-red-300: #ff7770;
+  --color-red-400: #df3a32;
+  --color-red-500: #b00504;
+  --color-red-600: #970403;
+  --color-red-700: #7b0303;
+  --color-red-800: #620202;
+  --color-red-900: #490202;
+  --color-red-950: #2b0101;
 }
 
 html {
-  background: #d5deef;
+  background: #eff0f0;
   font-size: 15px;
 }
 
@@ -33,18 +149,28 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100dvh;
-  background:
-    radial-gradient(circle at 92% 4%, rgba(138, 174, 224, 0.18), transparent 25rem),
-    radial-gradient(circle at 8% 88%, rgba(99, 142, 203, 0.12), transparent 22rem),
-    #ffffff;
-  color: #395886;
-  font-family: "Poppins", "Inter", ui-sans-serif, system-ui, sans-serif;
+  background: #ffffff;
+  color: #212225;
+  font-family: "Roboto Condensed", "Arial Narrow", ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
 #root {
   height: 100dvh;
+  min-width: 0;
+}
+
+.app-workspace,
+.app-workspace main,
+.app-workspace section,
+.app-workspace article {
+  min-width: 0;
+}
+
+.adaptive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
 }
 
 button,
@@ -58,13 +184,13 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid rgba(99, 142, 203, 0.24);
+  outline: 3px solid rgba(0, 97, 132, 0.28);
   outline-offset: 2px;
 }
 
 ::selection {
-  background: #b1c9ef;
-  color: #395886;
+  background: #b0eefc;
+  color: #212225;
 }
 
 dialog {
@@ -89,33 +215,33 @@ dialog {
 .app-workspace input:not([type="checkbox"]):not([type="radio"]),
 .app-workspace select,
 .app-workspace textarea {
-  border-color: #d5deef;
-  background-color: #f0f3fa;
+  border-color: #e0e2e2;
+  background-color: #f7f8f8;
   transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
 }
 
 .app-workspace input:not([type="checkbox"]):not([type="radio"]):hover,
 .app-workspace select:hover,
 .app-workspace textarea:hover {
-  border-color: #b1c9ef;
+  border-color: #bdc0c0;
   background-color: #ffffff;
 }
 
 .app-workspace input:not([type="checkbox"]):not([type="radio"]):focus,
 .app-workspace select:focus,
 .app-workspace textarea:focus {
-  border-color: #8aaee0;
+  border-color: #006184;
   background-color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(99, 142, 203, 0.14);
+  box-shadow: 0 0 0 3px rgba(0, 97, 132, 0.16);
 }
 
 .app-workspace input[type="checkbox"],
 .app-workspace input[type="radio"] {
-  accent-color: #638ecb;
+  accent-color: #006184;
 }
 
 .app-workspace table thead {
-  background: #f0f3fa;
+  background: #eff0f0;
 }
 
 .app-workspace table tbody tr {
@@ -123,7 +249,7 @@ dialog {
 }
 
 .app-workspace table tbody tr:hover {
-  background: #f0f3fa;
+  background: #f7f8f8;
 }
 
 @media (min-width: 1024px) {
@@ -154,11 +280,11 @@ dialog {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #b1c9ef;
+  background: #bdc0c0;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #638ecb;
+  background: #006184;
 }
 
 @media (prefers-reduced-motion: reduce) {

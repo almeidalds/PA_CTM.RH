@@ -3,7 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import type {
+  Ctmbrasi_employeerecordsesctmbrasi_employeestatus,
+  Ctmbrasi_employeerecordsesctmbrasi_gender,
+  Ctmbrasi_employeerecordsesstatecode,
+} from "../generated/models/Ctmbrasi_employeerecordsesModel";
+
 export type VacationPeriod = {
+  recordId?: string;
   dataInicio: string;
   dataFim: string;
   dias: number;
@@ -19,6 +26,14 @@ export type RhEmployee = {
   dataAdmissao: string;
   dataTerminoReal: string; // Format: YYYY-MM-DD
   statusFuncionario: string; // "Ativo" | "Encerrado" | "A começar"
+  globalId?: string;
+  genero?: Ctmbrasi_employeerecordsesctmbrasi_gender;
+  iniciaisFuncionario?: string;
+  emailBYU?: string;
+  emailPessoal?: string;
+  statusDataverse?: Ctmbrasi_employeerecordsesctmbrasi_employeestatus;
+  statusRegistro?: Ctmbrasi_employeerecordsesstatecode;
+  templo?: boolean;
   idiomas: string[];
   emailCorporativo: string;
   linkZoom: string;
@@ -179,6 +194,7 @@ export type TimelineEventCategory =
   | "Contrato"
   | "Férias"
   | "Substituição"
+  | "Idioma"
   | "Risco"
   | "Alteração administrativa";
 
@@ -207,4 +223,5 @@ export type AppSettings = {
   idiomas: string[];
   cargos: string[];
   zonas: string[];
+  turnos: string[];
 };

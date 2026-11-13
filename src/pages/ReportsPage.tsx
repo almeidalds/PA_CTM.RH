@@ -8,16 +8,13 @@ import {
   Users,
   ShieldAlert,
   FileWarning,
-  Globe,
   Hourglass,
   CalendarPlus,
   Compass,
-  TrendingDown,
   Layers3,
   CalendarCheck2,
   CalendarClock,
   AlertOctagon,
-  Languages,
   Sparkles,
   Search,
   ArrowUpRight,
@@ -31,7 +28,7 @@ import {
   Clock
 } from "lucide-react";
 import { RhEmployee, RiskLevel } from "../types/rh";
-import { DataIntegrityCard, DistributionPanel } from "../components/DashboardAnalytics";
+import { DistributionPanel } from "../components/DashboardAnalytics";
 import { DeparturesChart } from "../components/DeparturesChart";
 import { KpiCard } from "../components/KpiCard";
 import {
@@ -67,10 +64,6 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
   // 1. PROCESSAR MÉTRICAS DOS INDICADORES
   const total = employees.length;
   const ativos = employees.filter((e) => e.statusFuncionario === "Ativo").length;
-  const instrutoresAtivos = employees.filter(
-    (e) => e.statusFuncionario === "Ativo" && e.cargo?.toLowerCase().includes("instrutor")
-  ).length;
-  const encerrados = employees.filter((e) => e.statusFuncionario === "Encerrado").length;
   const aComecar = employees.filter((e) => e.statusFuncionario === "A começar").length;
 
   // Saídas previstas
@@ -104,17 +97,6 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
     return calcularRisco(e) === "Crítico";
   }).length;
 
-  // Idiomas ativos
-  const idiomasSet = new Set<string>();
-  employees.forEach((emp) => {
-    if (emp.statusFuncionario === "Ativo" && emp.idiomas) {
-      emp.idiomas.forEach((l) => {
-        if (l && l.trim() !== "") idiomasSet.add(l.trim());
-      });
-    }
-  });
-  const totalIdiomasAtivos = idiomasSet.size;
-
   // Cadastros com pendência
   const qualidade = calcularQualidadeDados(employees);
   const comPendencia = qualidade.comPendencia;
@@ -129,12 +111,6 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
     }))
     .filter((e) => e.dias !== null && e.dias >= 0)
     .sort((a, b) => (a.dias || 0) - (b.dias || 0));
-
-  const proximaSaida = proximasSaidasDisponiveis[0] || null;
-
-  const colaboradorPrioritario = proximasSaidasDisponiveis.find(
-    (employee) => calcularRisco(employee) === "Crítico"
-  ) || proximaSaida;
 
   // Zona com maior concentração de saídas nos próximos 90 dias
   const saídasPorZona90: Record<string, number> = {};
@@ -160,23 +136,6 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
   const listZonas = agruparPorZona(employees);
   const listTurnos = agruparPorTurno(employees);
   
-  const listStatus = [
-    { name: "Ativo", count: ativos, percentage: total > 0 ? Math.round((ativos / total) * 100) : 0 },
-    { name: "A começar", count: aComecar, percentage: total > 0 ? Math.round((aComecar / total) * 100) : 0 },
-    { name: "Encerrado", count: encerrados, percentage: total > 0 ? Math.round((encerrados / total) * 100) : 0 },
-  ];
-
-  const riscosCounts = { "Crítico": 0, "Alto": 0, "Médio": 0, "Baixo": 0, "Sem risco": 0, "Cadastro incompleto": 0 };
-  employees.forEach((e) => {
-    const r = calcularRisco(e);
-    riscosCounts[r]++;
-  });
-  const listRiscos = Object.entries(riscosCounts).map(([name, count]) => ({
-    name,
-    count,
-    percentage: total > 0 ? Math.round((count / total) * 100) : 0,
-  }));
-
   return (
     <div className="space-y-5 font-sans">
       
@@ -184,7 +143,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* Total Funcionários Ativos - highlighted slate/blue card */}
         <KpiCard
-          title="Funcionários Ativos"
+          title="Funcionários"
           value={ativos}
           icon={Users}
           colorType="blue"
@@ -232,12 +191,8 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
       </div>
 
       {showMoreKPIs && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fadeIn">
-          <KpiCard title="Total Cadastros" value={total} icon={Users} colorType="gray" subtitle="Total geral histórico" />
+        <div className="adaptive-grid gap-4 animate-fadeIn">
           <KpiCard title="Funcionários a Começar" value={aComecar} icon={CalendarPlus} colorType="blue" subtitle="Admissões futuras" />
-          <KpiCard title="Funcionários Desligados" value={encerrados} icon={TrendingDown} colorType="gray" subtitle="Contratos finalizados" />
-          <KpiCard title="Idiomas Ativos" value={totalIdiomasAtivos} icon={Globe} colorType="blue" subtitle="Línguas lecionadas" />
-          <KpiCard title="Instrutores em Sala" value={instrutoresAtivos} icon={Languages} colorType="blue" subtitle="Atuação pedagógica ativa" />
           <KpiCard title="Término em 60 Dias" value={saem60} icon={Hourglass} colorType="orange" subtitle="Janela de vencimento médio" />
           <KpiCard title="Término em 90 Dias" value={saem90} icon={Hourglass} colorType="orange" subtitle="Janela de vencimento longo" />
           <KpiCard title="Término em 180 Dias" value={saem180} icon={Hourglass} colorType="gray" subtitle="Janela de estabilidade" />
@@ -250,112 +205,18 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
         {/* Bento Card 1: Project Analytics Chart (Saídas por Mês / Turno) */}
         <DeparturesChart employees={employees} onSelectEmployee={onSelectEmployee} />
 
-        <div className="lg:col-span-4 bg-gradient-to-br from-[#f2efff] to-[#fff4f8] p-6 rounded-[22px] border border-[#e7e0fb] shadow-[0_12px_32px_rgba(72,77,130,0.07)] flex flex-col justify-between min-h-[300px]">
-          <div>
-            <span className="text-[10px] font-semibold text-yinmn uppercase tracking-[0.14em] block mb-4">
-              Prioridade do dia
-            </span>
-            <h4 className="text-base font-bold text-oxford leading-snug">
-              {colaboradorPrioritario ? "Revisar renovação contratual" : "Nenhuma ação urgente"}
-            </h4>
-            <p className="text-[11px] text-slate-500 font-medium mt-1">
-              {colaboradorPrioritario
-                ? `${colaboradorPrioritario.nome} · ${colaboradorPrioritario.cargo || "Cargo não informado"}`
-                : "Não há contratos com término futuro cadastrado."}
-            </p>
-            <div className="mt-4 bg-white/75 border border-white p-3 rounded-xl shadow-sm">
-              <span className="text-[9px] text-slate-400 uppercase font-semibold block tracking-wider">Janela de ação</span>
-              <p className={`text-xs font-semibold mt-1 ${colaboradorPrioritario && (colaboradorPrioritario.dias ?? 999) <= 15 ? "text-rose-600" : "text-cadet"}`}>
-                {colaboradorPrioritario ? "Término de contrato" : "Situação controlada"}
-              </p>
-              <p className="text-[10px] text-slate-500 font-medium mt-0.5">
-                {colaboradorPrioritario ? `${colaboradorPrioritario.dias} dias restantes` : "Continue acompanhando os indicadores"}
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => {
-              if (colaboradorPrioritario) onSelectEmployee(colaboradorPrioritario);
-            }}
-            disabled={!colaboradorPrioritario}
-            className="w-full py-3 bg-yinmn hover:bg-cadet disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold text-[11px] rounded-xl transition-all active:scale-[0.98] shadow-sm cursor-pointer"
-          >
-            {colaboradorPrioritario ? "Ver detalhes do contrato" : "Sem pendências urgentes"}
-          </button>
-        </div>
-
       </div>
 
       {/* 4. Bento Grid - Row 2 - modeled exactly after the mockup's row 3 */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* Bento Card 4: Team Member Analytics (Funcionários Monitorados) */}
-        <div className="lg:col-span-8 bg-white p-6 rounded-[22px] border border-sky-100 shadow-[0_12px_32px_rgba(72,77,130,0.055)] flex flex-col justify-between">
-          <div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">
-              Status de Funcionários
-            </span>
-            
-            <div className="space-y-3.5">
-              {employees.slice(0, 4).map((emp) => {
-                const risk = calcularRisco(emp);
-                const firstLetter = emp.nome.charAt(0);
-                
-                // Set color badge based on risk
-                let badgeClass = "bg-green-50 text-green-700 border-green-200/50";
-                if (risk === "Crítico") badgeClass = "bg-red-50 text-red-700 border-red-200/50";
-                else if (risk === "Alto") badgeClass = "bg-amber-50 text-amber-700 border-amber-200/50";
-                else if (risk === "Médio") badgeClass = "bg-blue-50 text-blue-700 border-blue-200/50";
-
-                return (
-                  <div
-                    key={emp.recordId}
-                    onClick={() => onSelectEmployee(emp)}
-                    className="flex items-center justify-between p-2 hover:bg-sky-50 rounded-2xl transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-sky-100 to-sky-200 border border-sky-100 flex items-center justify-center text-xs font-black text-cadet shrink-0">
-                        {firstLetter}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-oxford truncate">{emp.nome}</p>
-                        <p className="text-[9px] text-slate-400 font-semibold truncate">
-                          {emp.cargo} &bull; {emp.idiomas?.join(", ")}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <span className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-full border ${badgeClass}`}>
-                      {risk}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          
-          <div className="text-center pt-4 border-t border-slate-50 mt-4">
-            <span className="text-[10px] text-slate-400 font-bold">
-              Todos os {total} colaboradores estão listados no Quadro Geral
-            </span>
-          </div>
-        </div>
-
-        <DataIntegrityCard quality={qualidade} />
-      </div>
-
       <DistributionPanel
         languages={listIdiomas}
         zones={listZonas}
         shifts={listTurnos}
-        risks={listRiscos}
-        statuses={listStatus}
         activeCount={ativos}
         totalCount={total}
       />
       {/* 5. Clean chronological output list of contract endings */}
-      <div className="bg-white p-6 rounded-[22px] border border-sky-100 shadow-[0_12px_32px_rgba(72,77,130,0.055)]">
+      <div className="bg-white p-6 rounded-[22px] border border-sky-100 shadow-[0_12px_32px_rgba(0,48,87,0.055)]">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
             <h4 className="text-base font-extrabold text-oxford">Próximos términos de contratos</h4>

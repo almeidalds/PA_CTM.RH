@@ -3,22 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from "react";
-import {
-  FileCheck2,
-  FileWarning,
-  ShieldCheck,
-  Languages,
-  Calendar,
-  MapPin,
-  Clock,
-  Briefcase,
-  Mail,
-  AlertTriangle,
-  Edit3
-} from "lucide-react";
-import { RhEmployee } from "../types/rh";
-import { calcularQualidadeDados } from "../utils/dataQualityUtils";
+import React, { useMemo, useState } from "react";
+import { AlertTriangle, Edit3, FileCheck2, Search, ShieldCheck, SlidersHorizontal } from "lucide-react";
+import { DataIssueSeverity, RhEmployee } from "../types/rh";
 import { identificarPendencias } from "../utils/riskUtils";
 import { DataIssueBadge } from "../components/DataIssueBadge";
 
@@ -28,172 +15,155 @@ interface PendingPageProps {
 }
 
 export const PendingPage: React.FC<PendingPageProps> = ({ employees, onEditEmployee }) => {
-  const stats = calcularQualidadeDados(employees);
+  const [search, setSearch] = useState("");
+  const [severityFilter, setSeverityFilter] = useState<DataIssueSeverity | "Todas">("Todas");
 
-  // Filtrar apenas quem possui alguma pendência cadastral
-  const employeesWithIssues = employees
-    .map((e) => ({
-      ...e,
-      issues: identificarPendencias(e)
-    }))
-    .filter((e) => e.issues.length > 0)
-    .sort((a, b) => {
-      // Ordena de forma que registros com problemas de maior gravidade fiquem no topo
-      const severityWeight = { "Crítica": 4, "Alta": 3, "Média": 2, "Baixa": 1 };
-      const maxA = Math.max(...a.issues.map((i) => severityWeight[i.severity] || 0), 0);
-      const maxB = Math.max(...b.issues.map((i) => severityWeight[i.severity] || 0), 0);
-      return maxB - maxA;
+  const employeesWithIssues = useMemo(() => {
+    const severityWeight: Record<DataIssueSeverity, number> = {
+      "Crítica": 4,
+      "Alta": 3,
+      "Média": 2,
+      "Baixa": 1,
+    };
+
+    return employees
+      .map((employee) => ({
+        ...employee,
+        issues: identificarPendencias(employee),
+      }))
+      .filter((employee) => employee.issues.length > 0)
+      .sort((a, b) => {
+        const maxA = Math.max(...a.issues.map((issue) => severityWeight[issue.severity]), 0);
+        const maxB = Math.max(...b.issues.map((issue) => severityWeight[issue.severity]), 0);
+        return maxB - maxA || a.nome.localeCompare(b.nome);
+      });
+  }, [employees]);
+
+  const filteredEmployees = useMemo(() => {
+    const normalizedSearch = search.trim().toLocaleLowerCase("pt-BR");
+
+    return employeesWithIssues.filter((employee) => {
+      const matchesSearch = !normalizedSearch || [
+        employee.nome,
+        employee.idFuncionario,
+        employee.cargo,
+        ...employee.issues.map((issue) => issue.label),
+      ].some((value) => value.toLocaleLowerCase("pt-BR").includes(normalizedSearch));
+      const matchesSeverity = severityFilter === "Todas"
+        || employee.issues.some((issue) => issue.severity === severityFilter);
+
+      return matchesSearch && matchesSeverity;
     });
+  }, [employeesWithIssues, search, severityFilter]);
 
-  const MiniKpi = ({ title, value, icon: Icon, colorClass, highlight }: { title: string; value: number | string; icon: any; colorClass: string; highlight?: boolean }) => (
-    <div className={`p-4 rounded-[20px] border bg-white shadow-[0_10px_24px_rgba(57,88,134,0.05)] flex items-center justify-between transition-all duration-300 ${highlight ? "border-sky-200 bg-sky-50/30" : "border-sky-100"}`}>
-      <div className="min-w-0 pr-2">
-        <span className="text-[10px] uppercase font-black text-slate-400 block truncate tracking-wider">{title}</span>
-        <span className={`text-lg font-extrabold mt-1 block ${colorClass}`}>{value}</span>
-      </div>
-      <div className={`p-2.5 rounded-xl shrink-0 ${highlight ? "bg-sky-100 text-yinmn" : "bg-slate-50 text-slate-400"}`}>
-        <Icon className="w-4 h-4" />
-      </div>
-    </div>
-  );
+  const getMaxSeverity = (issues: { severity: DataIssueSeverity }[]): DataIssueSeverity => {
+    const severityOrder: DataIssueSeverity[] = ["Crítica", "Alta", "Média", "Baixa"];
+    return severityOrder.find((severity) => issues.some((issue) => issue.severity === severity)) ?? "Baixa";
+  };
 
   return (
     <div className="space-y-6">
-      {/* Title Header */}
-      <div className="rounded-[22px] border border-white bg-gradient-to-br from-[#d5deef] to-[#f0f3fa] p-5 shadow-[0_12px_30px_rgba(57,88,134,0.07)]">
-        <h2 className="text-lg sm:text-xl font-bold text-oxford flex items-center gap-2.5">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className="flex items-center gap-2.5 text-lg font-bold text-oxford sm:text-xl">
           <FileCheck2 className="w-5 h-5 text-yinmn" />
           <span>Pendências Cadastrais</span>
-        </h2>
-        <p className="text-xs text-slate-400 font-medium mt-1">
-          Identifique e corrija omissões e lacunas de dados cruciais nos cadastros. Registros completos garantem indicadores e análises de risco precisas.
-        </p>
-      </div>
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">Revise os dados faltantes e corrija os cadastros diretamente.</p>
+        </div>
+      </header>
 
-      {/* Mini KPIs Quality Panel */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-9 gap-3">
-        <MiniKpi title="Total" value={stats.total} icon={Briefcase} colorClass="text-oxford" />
-        <MiniKpi title="Completos" value={stats.completos} icon={ShieldCheck} colorClass="text-emerald-600" highlight={stats.percentualQualidade === 100} />
-        <MiniKpi title="Pendentes" value={stats.comPendencia} icon={FileWarning} colorClass="text-rose-600" />
-        <MiniKpi title="Sem Idioma" value={stats.semIdioma} icon={Languages} colorClass="text-amber-600" />
-        <MiniKpi title="Sem Término" value={stats.semDataTermino} icon={Calendar} colorClass="text-rose-600" />
-        <MiniKpi title="Sem Zona" value={stats.semZona} icon={MapPin} colorClass="text-amber-600" />
-        <MiniKpi title="Sem Turno" value={stats.semTurno} icon={Clock} colorClass="text-amber-600" />
-        <MiniKpi title="Sem Cargo" value={stats.semCargo} icon={Briefcase} colorClass="text-amber-600" />
-        <MiniKpi title="Sem E-mail" value={stats.semEmail} icon={Mail} colorClass="text-yinmn" />
-      </div>
-
-      {/* Main Remediator Section */}
-      <div className="bg-white p-6 rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(57,88,134,0.06)] space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h3 className="text-sm font-bold text-oxford">Registros Pendentes de Correção</h3>
-            <p className="text-xs text-slate-400 font-medium mt-0.5">Clique em editar para suprir dados faltantes e recalcular conformidade do sistema</p>
+      <section aria-label="Registros pendentes de correção" className="overflow-hidden rounded-[22px] border border-sky-100 bg-white shadow-[0_12px_30px_rgba(0,48,87,0.06)]">
+        <div className="flex flex-col gap-4 border-b border-sky-100 p-5 sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-bold text-oxford">Registros para revisar</h3>
+              <p className="mt-1 text-xs text-slate-500">Prioridade por gravidade. Edite um cadastro para corrigir as informações.</p>
+            </div>
+            <span className="rounded-full bg-sky-50 px-3 py-1.5 text-xs font-semibold text-yinmn">
+              {filteredEmployees.length} de {employeesWithIssues.length} registros
+            </span>
           </div>
-          
-          <div className="text-xs font-black text-yinmn bg-sky-50 px-3.5 py-1.5 rounded-xl border border-sky-100 flex items-center gap-1.5 shrink-0">
-            <ShieldCheck className="w-4 h-4 text-yinmn" />
-            <span>Qualidade Global: {stats.percentualQualidade}%</span>
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
+            <label className="relative block">
+              <Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Buscar por nome, ID, cargo ou pendência"
+                aria-label="Buscar registros pendentes"
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-oxford outline-none transition focus:border-yinmn focus:ring-2 focus:ring-yinmn/15"
+              />
+            </label>
+            <label className="relative flex items-center">
+              <SlidersHorizontal aria-hidden="true" className="pointer-events-none absolute left-3 h-4 w-4 text-slate-400" />
+              <select
+                value={severityFilter}
+                onChange={(event) => setSeverityFilter(event.target.value as DataIssueSeverity | "Todas")}
+                aria-label="Filtrar por gravidade"
+                className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-700 outline-none transition focus:border-yinmn focus:ring-2 focus:ring-yinmn/15"
+              >
+                <option value="Todas">Todas as gravidades</option>
+                <option value="Crítica">Crítica</option>
+                <option value="Alta">Alta</option>
+                <option value="Média">Média</option>
+                <option value="Baixa">Baixa</option>
+              </select>
+            </label>
           </div>
         </div>
 
-        {/* Datagrid of Issues */}
-        <div className="overflow-x-auto no-scrollbar">
-          <table className="w-full min-w-[900px] border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-sky-100 text-slate-400 font-black uppercase text-[10px] bg-sky-50/60">
-                <th className="py-3 px-3 text-left">Funcionário</th>
-                <th className="py-3 px-3 text-left">ID Funcional</th>
-                <th className="py-3 px-3 text-left">Cargo</th>
-                <th className="py-3 px-3 text-left">Turno/Zona</th>
-                <th className="py-3 px-3 text-left">E-mail Corporativo</th>
-                <th className="py-3 px-3 text-left">Lacunas Identificadas</th>
-                <th className="py-3 px-3 text-center">Severidade Máxima</th>
-                <th className="py-3 px-3 text-center">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-sky-100">
-              {employeesWithIssues.map((emp) => {
-                // Descobrir a gravidade máxima do registro
-                const gravidades = emp.issues.map((i) => i.severity);
-                const maxSeverity = gravidades.includes("Crítica")
-                  ? "Crítica"
-                  : gravidades.includes("Alta")
-                  ? "Alta"
-                  : gravidades.includes("Média")
-                  ? "Média"
-                  : "Baixa";
-
-                return (
-                  <tr key={emp.recordId} className="hover:bg-sky-50/20 transition-colors duration-200">
-                    {/* Nome */}
-                    <td className="py-3.5 px-3 font-bold text-oxford">{emp.nome}</td>
-                    
-                    {/* ID */}
-                    <td className="py-3.5 px-3 font-mono font-bold text-slate-400">
-                      {emp.idFuncionario ? emp.idFuncionario : <span className="text-rose-500 font-black bg-rose-50 px-1.5 py-0.5 rounded-md">Pendente</span>}
-                    </td>
-
-                    {/* Cargo */}
-                    <td className="py-3.5 px-3 text-slate-500 font-semibold">{emp.cargo || <span className="text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md font-extrabold text-[9px] uppercase">Sem cargo</span>}</td>
-
-                    {/* Lotação */}
-                    <td className="py-3.5 px-3 text-slate-500 font-semibold">
-                      <div>{emp.turno || <span className="text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md font-extrabold text-[9px] uppercase">Sem turno</span>}</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5 font-medium">{emp.zona || <span className="text-amber-500 text-[9px] font-bold">Sem zona</span>}</div>
-                    </td>
-
-                    {/* E-mail */}
-                    <td className="py-3.5 px-3 font-semibold text-slate-500">
-                      {emp.emailCorporativo || <span className="text-slate-300 italic font-normal">Não fornecido</span>}
-                    </td>
-
-                    {/* Lista de Erros */}
-                    <td className="py-3.5 px-3">
-                      <div className="flex flex-col gap-1 max-w-[280px]">
-                        {emp.issues.map((iss, i) => (
-                          <div key={i} className="flex items-center gap-1.5 text-[11px] text-slate-600 font-semibold">
-                            <AlertTriangle className={`w-3.5 h-3.5 shrink-0 ${iss.severity === "Crítica" ? "text-rose-500" : "text-amber-500"}`} />
-                            <span className="truncate">{iss.label}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-
-                    {/* Severidade */}
-                    <td className="py-3.5 px-3 text-center">
-                      <DataIssueBadge severity={maxSeverity} />
-                    </td>
-
-                    {/* Editar */}
-                    <td className="py-3.5 px-3 text-center">
-                      <button
-                        onClick={() => onEditEmployee(emp)}
-                        className="inline-flex items-center gap-1.5 bg-sky-50/50 hover:bg-sky-50 text-slate-500 hover:text-yinmn font-bold px-3 py-1.5 rounded-xl border border-sky-100 transition-all duration-200 cursor-pointer"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                        <span>Editar</span>
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-
-              {employeesWithIssues.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="py-12 text-center">
-                    <div className="max-w-sm mx-auto space-y-3">
-                      <ShieldCheck className="w-12 h-12 text-emerald-500 mx-auto" />
-                      <h4 className="text-base font-bold text-oxford">Base de dados 100% sã!</h4>
-                      <p className="text-xs text-slate-400 font-semibold">Todos os cadastros estão devidamente preenchidos e válidos.</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+        {filteredEmployees.length > 0 ? (
+          <ul className="divide-y divide-sky-100">
+            {filteredEmployees.map((employee) => (
+              <li key={employee.recordId} className="flex flex-col gap-4 p-5 transition-colors hover:bg-sky-50/30 sm:flex-row sm:items-start sm:justify-between sm:px-6">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="font-bold text-oxford">{employee.nome}</h4>
+                    <DataIssueBadge severity={getMaxSeverity(employee.issues)} />
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {[employee.idFuncionario && `ID ${employee.idFuncionario}`, employee.cargo].filter(Boolean).join(" · ") || "Dados de identificação ausentes"}
+                  </p>
+                  <ul aria-label="Pendências do cadastro" className="mt-3 flex flex-wrap gap-2">
+                    {employee.issues.map((issue) => (
+                      <li key={issue.field} className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-900">
+                        <AlertTriangle aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+                        {issue.label}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onEditEmployee(employee)}
+                  className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl bg-yinmn px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-cadet focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yinmn focus-visible:ring-offset-2"
+                >
+                  <Edit3 aria-hidden="true" className="h-4 w-4" />
+                  Corrigir cadastro
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="px-5 py-12 text-center sm:px-6">
+            {employeesWithIssues.length === 0 ? (
+              <>
+                <ShieldCheck aria-hidden="true" className="mx-auto mb-3 h-10 w-10 text-emerald-500" />
+                <h4 className="font-bold text-oxford">Nenhuma pendência encontrada</h4>
+                <p className="mt-1 text-sm text-slate-500">Todos os cadastros estão com os dados obrigatórios preenchidos.</p>
+              </>
+            ) : (
+              <>
+                <Search aria-hidden="true" className="mx-auto mb-3 h-8 w-8 text-slate-300" />
+                <h4 className="font-bold text-oxford">Nenhum registro corresponde aos filtros</h4>
+                <p className="mt-1 text-sm text-slate-500">Tente outro termo ou selecione uma gravidade diferente.</p>
+              </>
+            )}
+          </div>
+        )}
+      </section>
     </div>
   );
 };

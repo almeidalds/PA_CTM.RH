@@ -30,6 +30,7 @@ import type {
 } from "../generated/models/Ctmbrasi_rhemployeelanguagesesModel";
 
 import type {
+  Ctmbrasi_rhvacationperiodsesBase,
   Ctmbrasi_rhvacationperiodses,
 } from "../generated/models/Ctmbrasi_rhvacationperiodsesModel";
 
@@ -58,6 +59,8 @@ import {
   carregarCatalogosDataverse,
   type CatalogosRH,
 } from "./dataverseCatalogs";
+import { registrarAlteracoesFuncionario } from "./employeeTimeline";
+import { getToday } from "../utils/dateUtils";
 
 // ==========================================
 // CACHE TEMPORÁRIO DA SESSÃO
@@ -65,9 +68,24 @@ import {
 
 let funcionariosEmMemoria: RhEmployee[] = [];
 let catalogosEmMemoria: CatalogosRH | null = null;
+let avisoFechamentoContratos = "";
 
 const formatarData = (valor?: string | null) =>
   (valor || "").slice(0, 10);
+
+export class FuncionarioAtualizadoComAvisosError extends Error {
+  constructor(
+    public readonly funcionariosAtualizados: RhEmployee[],
+    message: string,
+  ) {
+    super(message);
+    this.name = "FuncionarioAtualizadoComAvisosError";
+  }
+}
+
+export function obterAvisoFechamentoContratos(): string {
+  return avisoFechamentoContratos;
+}
 
 // ==========================================
 // CONSULTAS COM PAGINAÇÃO
@@ -187,7 +205,82 @@ export async function carregarFuncionarios(): Promise<
     catalogos.idiomas.map((item) => [item.id, item.nome])
   );
 
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = getToday();
+
+  // Ao atingir a data final do contrato, encerra o funcionario e move sua
+  // lotacao para a zona "Encerrado". A interface aplica a mesma regra mesmo
+  // quando o Dataverse nao puder ser atualizado naquele carregamento.
+  avisoFechamentoContratos = "";
+  const zonaEncerrado = catalogos.zonas.find(
+    (zona) =>
+      zona.ativo &&
+      zona.nome.trim().toLocaleLowerCase("pt-BR") === "encerrado",
+  );
+  const contratosVencidos = funcionarios.filter((funcionario) => {
+    const termino = formatarData(
+      funcionario.ctmbrasi_contractenddate ||
+      funcionario.ctmbrasi_terminationdate,
+    );
+    return Boolean(termino && termino <= hoje);
+  });
+
+  const falhasFechamento: string[] = [];
+  if (!zonaEncerrado && contratosVencidos.length > 0) {
+    avisoFechamentoContratos =
+      "Os contratos vencidos foram exibidos como encerrados, mas a zona ativa " +
+      "'Encerrado' n\u00e3o foi encontrada no Dataverse. Cadastre essa zona para " +
+      "concluir a atualiza\u00e7\u00e3o dos registros.";
+  }
+
+  await Promise.all(contratosVencidos.map(async (funcionario) => {
+    const zonaAtualId = funcionario._ctmbrasi_zone_value || "";
+    const precisaEncerrar = funcionario.ctmbrasi_employeestatus !== 583150004;
+    const precisaMoverZona = Boolean(
+      zonaEncerrado && zonaAtualId.toLowerCase() !== zonaEncerrado.id.toLowerCase(),
+    );
+
+    if (!precisaEncerrar && !precisaMoverZona) return;
+
+    const campos: Partial<Ctmbrasi_employeerecordsesBase> = {};
+    if (precisaEncerrar) campos.ctmbrasi_employeestatus = 583150004;
+    if (precisaMoverZona && zonaEncerrado) {
+      campos["ctmbrasi_Zone@odata.bind"] =
+        `/ctmbrasi_rhzoneses(${zonaEncerrado.id})`;
+    }
+
+    try {
+      const resultado = await Employees.update(
+        funcionario.ctmbrasi_employeerecordsid,
+        campos,
+      );
+
+      if (!resultado.success) {
+        falhasFechamento.push(funcionario.ctmbrasi_fullname || funcionario.ctmbrasi_employeeid);
+        return;
+      }
+    } catch (error) {
+      console.error("Falha ao encerrar contrato vencido no Dataverse:", error);
+      falhasFechamento.push(funcionario.ctmbrasi_fullname || funcionario.ctmbrasi_employeeid);
+      return;
+    }
+
+    funcionario.ctmbrasi_employeestatus = 583150004;
+    if (zonaEncerrado && precisaMoverZona) {
+      funcionario._ctmbrasi_zone_value = zonaEncerrado.id;
+      funcionario.ctmbrasi_zonename = zonaEncerrado.nome;
+    }
+  }));
+
+  if (falhasFechamento.length > 0) {
+    const nomes = falhasFechamento.slice(0, 3).join(", ");
+    const restantes = falhasFechamento.length - 3;
+    avisoFechamentoContratos = [
+      avisoFechamentoContratos,
+      `N\u00e3o foi poss\u00edvel gravar o encerramento de: ${nomes}${
+        restantes > 0 ? ` e mais ${restantes}` : ""
+      }. A exibi\u00e7\u00e3o foi ajustada temporariamente.`,
+    ].filter(Boolean).join(" ");
+  }
 
   // ========================================
   // CONVERTER REGISTROS PARA A INTERFACE
@@ -196,13 +289,20 @@ export async function carregarFuncionarios(): Promise<
   const registrosConvertidos = funcionarios.map(
     (funcionario): RhEmployee => {
       const id = funcionario.ctmbrasi_employeerecordsid;
+      const dataTermino = formatarData(
+        funcionario.ctmbrasi_contractenddate ||
+        funcionario.ctmbrasi_terminationdate,
+      );
+      const contratoVencido = Boolean(dataTermino && dataTermino <= hoje);
 
       const feriasFuncionario = ferias.filter(
         (item) => item._ctmbrasi_employee_value === id
       );
 
       const periodosAtivos = feriasFuncionario.filter(
-        (item) => item.ctmbrasi_vacationstatus !== 583150005
+        (item) =>
+          item.statecode === 0 &&
+          item.ctmbrasi_vacationstatus !== 583150005
       );
 
       const contrato = renovacoes.find(
@@ -221,6 +321,7 @@ export async function carregarFuncionarios(): Promise<
             item.ctmbrasi_enddate
         )
         .map((item) => ({
+          recordId: item.ctmbrasi_rhvacationperiodsid,
           dataInicio: formatarData(item.ctmbrasi_startdate),
           dataFim: formatarData(item.ctmbrasi_enddate),
           dias: item.ctmbrasi_totaldays || 0,
@@ -235,6 +336,9 @@ export async function carregarFuncionarios(): Promise<
         nome:
           funcionario.ctmbrasi_fullname || "",
 
+        globalId:
+          funcionario.ctmbrasi_globalid || "",
+
         cargo:
           mapaCargos.get(
             funcionario._ctmbrasi_position_value || ""
@@ -242,12 +346,13 @@ export async function carregarFuncionarios(): Promise<
           funcionario.ctmbrasi_positionname ||
           "",
 
-        zona:
-          mapaZonas.get(
-            funcionario._ctmbrasi_zone_value || ""
-          ) ||
-          funcionario.ctmbrasi_zonename ||
-          "",
+        zona: contratoVencido
+          ? zonaEncerrado?.nome || "Encerrado"
+          : mapaZonas.get(
+              funcionario._ctmbrasi_zone_value || ""
+            ) ||
+            funcionario.ctmbrasi_zonename ||
+            "",
 
         turno:
           mapaTurnos.get(
@@ -260,24 +365,44 @@ export async function carregarFuncionarios(): Promise<
         dataAdmissao:
           formatarData(funcionario.ctmbrasi_hiredate),
 
-        dataTerminoReal:
-          formatarData(
-            funcionario.ctmbrasi_contractenddate ||
-            funcionario.ctmbrasi_terminationdate
-          ),
+        dataTerminoReal: dataTermino,
 
         statusFuncionario:
+          contratoVencido ||
+          funcionario.statecode === 1 ||
           funcionario.ctmbrasi_employeestatus === 583150003 ||
           funcionario.ctmbrasi_employeestatus === 583150004
             ? "Encerrado"
             : "Ativo",
+
+        genero: funcionario.ctmbrasi_gender,
+
+        iniciaisFuncionario:
+          funcionario.ctmbrasi_employeeinitials || "",
+
+        emailBYU:
+          funcionario.ctmbrasi_byuemail || "",
+
+        emailPessoal:
+          funcionario.ctmbrasi_personalemail || "",
+
+        statusDataverse: contratoVencido
+          ? 583150004
+          : funcionario.ctmbrasi_employeestatus,
+
+        statusRegistro:
+          funcionario.statecode,
+
+        templo:
+          funcionario.ctmbrasi_temple,
 
         idiomas: [
           ...new Set(
             vinculos
               .filter(
                 (item) =>
-                  item._ctmbrasi_employee_value === id
+                  item._ctmbrasi_employee_value === id &&
+                  item.statecode === 0
               )
               .map(
                 (item) =>
@@ -373,7 +498,6 @@ function verificarCamposRelacionados(
   anterior: RhEmployee
 ): void {
   const propriedades: (keyof RhEmployee)[] = [
-    "idiomas",
     "periodosFerias",
     "feriasMarcadas",
     "feriasConcluidas",
@@ -424,6 +548,115 @@ function buscarId(
   }
 
   return id;
+}
+
+async function salvarIdiomasFuncionario(
+  funcionario: RhEmployee,
+  idiomasSelecionados: string[]
+): Promise<void> {
+  const catalogos = catalogosEmMemoria;
+  if (!catalogos) {
+    throw new Error("Catálogos do Dataverse não carregados.");
+  }
+
+  const nomesIdiomasDesejados = [
+    ...new Set(
+      idiomasSelecionados
+        .map((idioma) => idioma.trim())
+        .filter(Boolean)
+    ),
+  ];
+  const idiomasDesejados = nomesIdiomasDesejados.map((nome) => {
+    const id = buscarId(nome, catalogos.idiomas, "Idioma");
+    if (!id) {
+      throw new Error(`Não foi possível encontrar o idioma ${nome}.`);
+    }
+
+    return { nome, id };
+  });
+  const idsDesejados = new Set(
+    idiomasDesejados.map((idioma) => idioma.id.toLowerCase())
+  );
+  const vinculos = await lerTodas<Ctmbrasi_rhemployeelanguageses>(
+    "Idiomas dos funcionários",
+    EmployeeLanguages.getAll.bind(EmployeeLanguages)
+  );
+  const vinculosFuncionario = vinculos.filter(
+    (vinculo) =>
+      vinculo._ctmbrasi_employee_value?.toLowerCase() ===
+      funcionario.recordId.toLowerCase()
+  );
+  const idsAtivos = new Set(
+    vinculosFuncionario
+      .filter((vinculo) => vinculo.statecode === 0)
+      .map((vinculo) => vinculo._ctmbrasi_language_value?.toLowerCase())
+      .filter((id): id is string => Boolean(id))
+  );
+
+  for (const idioma of idiomasDesejados) {
+    if (idsAtivos.has(idioma.id.toLowerCase())) continue;
+
+    const vinculoInativo = vinculosFuncionario.find(
+      (vinculo) =>
+        vinculo.statecode === 1 &&
+        vinculo._ctmbrasi_language_value?.toLowerCase() ===
+          idioma.id.toLowerCase()
+    );
+
+    if (vinculoInativo) {
+      const resultado = await EmployeeLanguages.update(
+        vinculoInativo.ctmbrasi_rhemployeelanguagesid,
+        { statecode: 0, statuscode: 1 }
+      );
+
+      if (!resultado.success) {
+        throw new Error(
+          resultado.error?.message ||
+          `Não foi possível reativar o idioma ${idioma.nome}.`
+        );
+      }
+
+      continue;
+    }
+
+    const resultado = await EmployeeLanguages.create({
+      statecode: 0,
+      ctmbrasi_employeelanguagerecord:
+        `${funcionario.idFuncionario}-${idioma.nome}`,
+      "ctmbrasi_Employee@odata.bind":
+        `/ctmbrasi_employeerecordses(${funcionario.recordId})`,
+      "ctmbrasi_Language@odata.bind":
+        `/ctmbrasi_rhlanguageses(${idioma.id})`,
+    });
+
+    if (!resultado.success) {
+      throw new Error(
+        resultado.error?.message ||
+        `Não foi possível associar o idioma ${idioma.nome}.`
+      );
+    }
+  }
+
+  for (const vinculo of vinculosFuncionario) {
+    const idiomaId = vinculo._ctmbrasi_language_value?.toLowerCase();
+    if (vinculo.statecode !== 0 || !idiomaId || idsDesejados.has(idiomaId)) {
+      continue;
+    }
+
+    const resultado = await EmployeeLanguages.update(
+      vinculo.ctmbrasi_rhemployeelanguagesid,
+      { statecode: 1, statuscode: 2 }
+    );
+
+    if (!resultado.success) {
+      throw new Error(
+        resultado.error?.message ||
+        `Não foi possível remover o vínculo do idioma ${
+          vinculo.ctmbrasi_languagename || idiomaId
+        }.`
+      );
+    }
+  }
 }
 
 // ==========================================
@@ -483,14 +716,15 @@ export async function salvarEdicaoFuncionario(
 
   verificarCamposRelacionados(novo, anterior);
 
-  if (
-    novo.statusFuncionario !==
-    anterior.statusFuncionario
-  ) {
-    throw new Error(
-      "A alteração de status será habilitada em outra etapa."
-    );
-  }
+  const normalizarIdiomas = (idiomas: string[]) =>
+    [...new Set(
+      idiomas
+        .map((idioma) => idioma.trim().toLocaleLowerCase("pt-BR"))
+        .filter(Boolean)
+    )].sort();
+  const idiomasAlterados =
+    JSON.stringify(normalizarIdiomas(novo.idiomas)) !==
+    JSON.stringify(normalizarIdiomas(anterior.idiomas));
 
   const campos: Partial<Ctmbrasi_employeerecordsesBase> =
     {};
@@ -501,6 +735,54 @@ export async function salvarEdicaoFuncionario(
 
   if (novo.idFuncionario !== anterior.idFuncionario) {
     campos.ctmbrasi_employeeid = novo.idFuncionario;
+  }
+
+  if (novo.globalId !== anterior.globalId) {
+    campos.ctmbrasi_globalid = novo.globalId ?? "";
+  }
+
+  if (novo.genero !== anterior.genero) {
+    campos.ctmbrasi_gender = novo.genero;
+  }
+
+  if (
+    novo.iniciaisFuncionario !==
+    anterior.iniciaisFuncionario
+  ) {
+    campos.ctmbrasi_employeeinitials =
+      novo.iniciaisFuncionario ?? "";
+  }
+
+  if (novo.emailBYU !== anterior.emailBYU) {
+    campos.ctmbrasi_byuemail = novo.emailBYU ?? "";
+  }
+
+  if (novo.emailPessoal !== anterior.emailPessoal) {
+    campos.ctmbrasi_personalemail =
+      novo.emailPessoal ?? "";
+  }
+
+  if (
+    novo.statusDataverse !== anterior.statusDataverse
+  ) {
+    if (novo.statusDataverse === undefined) {
+      throw new Error("Selecione o status do funcionário.");
+    }
+
+    campos.ctmbrasi_employeestatus =
+      novo.statusDataverse;
+  }
+
+  if (novo.templo !== anterior.templo) {
+    campos.ctmbrasi_temple = novo.templo;
+  }
+
+  if (novo.statusRegistro !== anterior.statusRegistro) {
+    if (novo.statusRegistro === undefined) {
+      throw new Error("Selecione o status do registro.");
+    }
+    campos.statecode = novo.statusRegistro;
+    campos.statuscode = novo.statusRegistro === 0 ? 1 : 2;
   }
 
   if (novo.dataAdmissao !== anterior.dataAdmissao) {
@@ -596,25 +878,228 @@ export async function salvarEdicaoFuncionario(
     }
   }
 
+  let erroIdiomas: unknown;
+  if (idiomasAlterados) {
+    try {
+      await salvarIdiomasFuncionario(novo, novo.idiomas);
+    } catch (error) {
+      erroIdiomas = error;
+    }
+  }
+
   // Recarrega os registros da fonte oficial.
-  return carregarFuncionarios();
+  const funcionariosAtualizados = await carregarFuncionarios();
+  const funcionarioAtualizado = funcionariosAtualizados.find(
+    (item) => item.recordId === novo.recordId
+  );
+
+  if (!funcionarioAtualizado) {
+    throw new Error(
+      "Os dados foram enviados ao Dataverse, mas o funcionário não foi encontrado ao atualizar a lista."
+    );
+  }
+
+  let erroHistorico: unknown;
+  try {
+    await registrarAlteracoesFuncionario(anterior, funcionarioAtualizado);
+  } catch (error) {
+    erroHistorico = error;
+  }
+
+  if (erroIdiomas || erroHistorico) {
+    const mensagens: string[] = [];
+    if (erroIdiomas) {
+      const detalhe = erroIdiomas instanceof Error ? erroIdiomas.message : String(erroIdiomas);
+      mensagens.push(`A alteração de idiomas não foi concluída por completo: ${detalhe}`);
+    }
+    if (erroHistorico) {
+      const detalhe = erroHistorico instanceof Error ? erroHistorico.message : String(erroHistorico);
+      mensagens.push(`O histórico não foi registrado corretamente: ${detalhe}`);
+    }
+
+    throw new FuncionarioAtualizadoComAvisosError(
+      funcionariosAtualizados,
+      `O estado atual do funcionário foi recarregado do Dataverse, mas houve um problema. ${mensagens.join(" ")}`
+    );
+  }
+
+  return funcionariosAtualizados;
 }
 
 // ==========================================
-// NOVO FUNCIONÁRIO
+// SALVAR FERIAS NO DATAVERSE
 // ==========================================
 
 
 /**
- * CADASTRO DE NOVOS FUNCIONÁRIOS
+ * PERIODOS DE FERIAS DOS FUNCIONARIOS
  * Microsoft Dataverse - CTM Brasil
  *
- * Cria o funcionário e associa seus idiomas.
- * Não utiliza localStorage ou registros fictícios.
+ * Cria, atualiza e cancela periodos na tabela relacionada.
  */
-export async function criarFuncionario(
-  dados: RhEmployee
+const calcularDiasPeriodo = (inicio: string, fim: string): number => {
+  const inicioUtc = Date.parse(`${inicio}T00:00:00Z`);
+  const fimUtc = Date.parse(`${fim}T00:00:00Z`);
+  if (!Number.isFinite(inicioUtc) || !Number.isFinite(fimUtc) || fimUtc < inicioUtc) {
+    return 0;
+  }
+  return Math.floor((fimUtc - inicioUtc) / 86_400_000) + 1;
+};
+
+const statusDoPeriodo = (
+  inicio: string,
+  fim: string,
+): NonNullable<Ctmbrasi_rhvacationperiodsesBase["ctmbrasi_vacationstatus"]> => {
+  const hoje = getToday();
+  if (fim < hoje) return 583150004;
+  if (inicio <= hoje) return 583150003;
+  return 583150000;
+};
+
+export async function salvarFeriasFuncionario(
+  novo: RhEmployee,
 ): Promise<RhEmployee[]> {
+  const anterior = funcionariosEmMemoria.find(
+    (item) => item.recordId === novo.recordId,
+  );
+
+  if (!anterior) {
+    throw new Error("Funcion\u00e1rio n\u00e3o carregado. Atualize os dados e tente novamente.");
+  }
+
+  const periodos = novo.periodosFerias.map((periodo) => ({
+    ...periodo,
+    dataInicio: periodo.dataInicio.trim(),
+    dataFim: periodo.dataFim.trim(),
+    dias: calcularDiasPeriodo(periodo.dataInicio, periodo.dataFim),
+  }));
+
+  if (periodos.some((periodo) => !periodo.dataInicio || !periodo.dataFim || periodo.dias <= 0)) {
+    throw new Error("Revise as datas dos per\u00edodos de f\u00e9rias antes de salvar.");
+  }
+
+  const ordenados = [...periodos].sort((a, b) => a.dataInicio.localeCompare(b.dataInicio));
+  if (ordenados.some((periodo, indice) =>
+    indice > 0 && periodo.dataInicio <= ordenados[indice - 1].dataFim
+  )) {
+    throw new Error("Os per\u00edodos de f\u00e9rias da mesma pessoa n\u00e3o podem se sobrepor.");
+  }
+
+  const diasVendidos = novo.feriasVendidas ? novo.diasVendidosFerias : 0;
+  const totalDias = periodos.reduce((total, periodo) => total + periodo.dias, 0);
+  if (diasVendidos < 0 || diasVendidos > 10) {
+    throw new Error("O abono pecuni\u00e1rio deve ter entre 0 e 10 dias.");
+  }
+  if (diasVendidos > 0 && periodos.length === 0) {
+    throw new Error("Adicione um per\u00edodo de f\u00e9rias antes de informar dias vendidos.");
+  }
+  if (totalDias + diasVendidos > 30) {
+    throw new Error("A soma dos dias de gozo e dos dias vendidos n\u00e3o pode ultrapassar 30 dias.");
+  }
+
+  const idsAnteriores = new Set(
+    anterior.periodosFerias
+      .map((periodo) => periodo.recordId)
+      .filter((id): id is string => Boolean(id)),
+  );
+  for (const periodo of periodos) {
+    if (periodo.recordId && !idsAnteriores.has(periodo.recordId)) {
+      throw new Error("Um dos per\u00edodos de f\u00e9rias n\u00e3o pertence a este funcion\u00e1rio.");
+    }
+  }
+
+  const idsMantidos = new Set<string>();
+  for (const [indice, periodo] of periodos.entries()) {
+    const diasVendidosNoPeriodo = indice === 0 ? diasVendidos : 0;
+    const campos: Partial<Omit<Ctmbrasi_rhvacationperiodsesBase, "ctmbrasi_rhvacationperiodsid">> = {
+      ctmbrasi_vacationperiodname:
+        `${novo.idFuncionario} - ${periodo.dataInicio} a ${periodo.dataFim}`,
+      ctmbrasi_startdate: periodo.dataInicio,
+      ctmbrasi_enddate: periodo.dataFim,
+      ctmbrasi_totaldays: periodo.dias,
+      ctmbrasi_dayssold: diasVendidosNoPeriodo,
+      ctmbrasi_vacationtype: diasVendidosNoPeriodo > 0 ? 583150001 : 583150000,
+      ctmbrasi_vacationstatus: statusDoPeriodo(periodo.dataInicio, periodo.dataFim),
+      statecode: 0,
+      statuscode: 1,
+    };
+
+    if (periodo.recordId) {
+      const resultado = await Vacations.update(periodo.recordId, campos);
+      if (!resultado.success) {
+        throw new Error(
+          resultado.error?.message || "N\u00e3o foi poss\u00edvel atualizar um per\u00edodo de f\u00e9rias.",
+        );
+      }
+      idsMantidos.add(periodo.recordId);
+      continue;
+    }
+
+    const resultado = await Vacations.create({
+      ...campos,
+      statecode: 0,
+      "ctmbrasi_Employee@odata.bind":
+        `/ctmbrasi_employeerecordses(${novo.recordId})`,
+    } as Omit<Ctmbrasi_rhvacationperiodsesBase, "ctmbrasi_rhvacationperiodsid">);
+
+    if (!resultado.success) {
+      throw new Error(
+        resultado.error?.message || "N\u00e3o foi poss\u00edvel criar um per\u00edodo de f\u00e9rias.",
+      );
+    }
+  }
+
+  // Periodos removidos da ficha ficam cancelados para preservar o historico.
+  for (const id of idsAnteriores) {
+    if (idsMantidos.has(id)) continue;
+    const resultado = await Vacations.update(id, {
+      ctmbrasi_vacationstatus: 583150005,
+    });
+    if (!resultado.success) {
+      throw new Error(
+        resultado.error?.message || "N\u00e3o foi poss\u00edvel cancelar um per\u00edodo removido.",
+      );
+    }
+  }
+
+  const funcionariosAtualizados = await carregarFuncionarios();
+  const funcionarioAtualizado = funcionariosAtualizados.find(
+    (item) => item.recordId === novo.recordId,
+  );
+
+  if (!funcionarioAtualizado) {
+    throw new Error(
+      "As f\u00e9rias foram enviadas ao Dataverse, mas o funcion\u00e1rio n\u00e3o foi encontrado na atualiza\u00e7\u00e3o.",
+    );
+  }
+
+  try {
+    await registrarAlteracoesFuncionario(anterior, funcionarioAtualizado);
+  } catch (error) {
+    const detalhe = error instanceof Error ? error.message : String(error);
+    throw new FuncionarioAtualizadoComAvisosError(
+      funcionariosAtualizados,
+      `As f\u00e9rias foram salvas, mas o hist\u00f3rico n\u00e3o foi registrado corretamente: ${detalhe}`,
+    );
+  }
+
+  return funcionariosAtualizados;
+}
+
+// ==========================================
+// NOVO FUNCIONARIO
+// ==========================================
+
+/**
+ * CADASTRO DE NOVOS FUNCIONARIOS
+ * Microsoft Dataverse - CTM Brasil
+ *
+ * Cria o funcionario e associa seus idiomas.
+ * Nao utiliza localStorage ou registros ficticios.
+ */
+async function criarFuncionarioNoDataverse(
+  dados: RhEmployee
+): Promise<string> {
 
   // ========================================
   // 1. VALIDAR INFORMAÇÕES
@@ -652,16 +1137,12 @@ export async function criarFuncionario(
     );
   }
 
-  // A tabela possui opções próprias para status.
-  // "A começar" ainda não tem correspondência exata.
-  if (
-    dados.statusFuncionario !== "Ativo" &&
-    dados.statusFuncionario !== "Encerrado"
-  ) {
-    throw new Error(
-      "Selecione Ativo ou Encerrado. O status 'A começar' " +
-      "ainda precisa de uma regra própria no Dataverse."
-    );
+  if (dados.statusDataverse === undefined) {
+    throw new Error("Selecione o status do funcionário.");
+  }
+
+  if (dados.statusRegistro === undefined) {
+    throw new Error("Selecione o status do registro.");
   }
 
   // Verificar duplicidade nos registros carregados.
@@ -742,7 +1223,8 @@ export async function criarFuncionario(
   const novoFuncionario: Parameters<
     typeof Employees.create
   >[0] = {
-    statecode: 0,
+    statecode: dados.statusRegistro,
+    statuscode: dados.statusRegistro === 0 ? 1 : 2,
 
     ctmbrasi_employeeid: idFuncionario,
 
@@ -750,10 +1232,7 @@ export async function criarFuncionario(
 
     ctmbrasi_hiredate: dataAdmissao,
 
-    ctmbrasi_employeestatus:
-      dados.statusFuncionario === "Encerrado"
-        ? 583150004
-        : 583150000,
+    ctmbrasi_employeestatus: dados.statusDataverse,
 
     ctmbrasi_corporateemail:
       dados.emailCorporativo.trim(),
@@ -761,6 +1240,32 @@ export async function criarFuncionario(
     ctmbrasi_zoomlink:
       dados.linkZoom.trim(),
   };
+
+  if (dados.globalId?.trim()) {
+    novoFuncionario.ctmbrasi_globalid = dados.globalId.trim();
+  }
+
+  if (dados.genero !== undefined) {
+    novoFuncionario.ctmbrasi_gender = dados.genero;
+  }
+
+  if (dados.iniciaisFuncionario?.trim()) {
+    novoFuncionario.ctmbrasi_employeeinitials =
+      dados.iniciaisFuncionario.trim();
+  }
+
+  if (dados.emailBYU?.trim()) {
+    novoFuncionario.ctmbrasi_byuemail = dados.emailBYU.trim();
+  }
+
+  if (dados.emailPessoal?.trim()) {
+    novoFuncionario.ctmbrasi_personalemail =
+      dados.emailPessoal.trim();
+  }
+
+  if (dados.templo !== undefined) {
+    novoFuncionario.ctmbrasi_temple = dados.templo;
+  }
 
   if (dados.dataTerminoReal) {
     novoFuncionario.ctmbrasi_contractenddate =
@@ -852,21 +1357,118 @@ export async function criarFuncionario(
     );
   }
 
-  // ========================================
-  // 6. ATUALIZAR A INTERFACE
-  // ========================================
+  return novoId;
+}
+
+export interface EmployeeImportRow {
+  rowNumber: number;
+  employee: RhEmployee;
+}
+
+export interface EmployeeImportFailure {
+  rowNumber: number;
+  employeeName: string;
+  employeeId: string;
+  message: string;
+}
+
+export interface EmployeeImportResult {
+  created: number;
+  imported: number;
+  failures: EmployeeImportFailure[];
+  employees?: RhEmployee[];
+  refreshError?: string;
+}
+
+export async function importarFuncionarios(
+  rows: EmployeeImportRow[],
+  onProgress?: (completed: number, total: number) => void
+): Promise<EmployeeImportResult> {
+  if (!catalogosEmMemoria) {
+    throw new Error(
+      "Os catálogos do Dataverse ainda não foram carregados. " +
+      "Atualize os dados e tente novamente."
+    );
+  }
+
+  const knownIds = new Set(
+    funcionariosEmMemoria
+      .map((employee) => employee.idFuncionario.trim().toLocaleLowerCase("pt-BR"))
+      .filter(Boolean)
+  );
+  const failures: EmployeeImportFailure[] = [];
+  let created = 0;
+  let imported = 0;
+
+  for (const [index, row] of rows.entries()) {
+    const employeeId = row.employee.idFuncionario.trim();
+    const normalizedId = employeeId.toLocaleLowerCase("pt-BR");
+
+    if (knownIds.has(normalizedId)) {
+      failures.push({
+        rowNumber: row.rowNumber,
+        employeeName: row.employee.nome,
+        employeeId,
+        message:
+          "ID já existe no sistema ou está repetido em outra linha do arquivo.",
+      });
+      onProgress?.(index + 1, rows.length);
+      continue;
+    }
+
+    knownIds.add(normalizedId);
+
+    try {
+      await criarFuncionarioNoDataverse(row.employee);
+      created += 1;
+      imported += 1;
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Erro inesperado ao criar o funcionário.";
+      if (message.includes("foi criado no Dataverse")) {
+        created += 1;
+      }
+      failures.push({
+        rowNumber: row.rowNumber,
+        employeeName: row.employee.nome,
+        employeeId,
+        message,
+      });
+    }
+    onProgress?.(index + 1, rows.length);
+  }
+
+  if (created === 0) {
+    return { created, imported, failures };
+  }
 
   try {
-    const funcionariosAtualizados =
-      await carregarFuncionarios();
-
-    console.info(
-      "Funcionário cadastrado no Dataverse:",
-      novoId
+    const employees = await carregarFuncionarios();
+    return { created, imported, failures, employees };
+  } catch (error) {
+    const refreshError =
+      error instanceof Error
+        ? error.message
+        : "Não foi possível atualizar a lista após a importação.";
+    console.error(
+      "Funcionários importados, mas falha ao recarregar a lista:",
+      error
     );
+    return { created, imported, failures, refreshError };
+  }
+}
 
+export async function criarFuncionario(
+  dados: RhEmployee
+): Promise<RhEmployee[]> {
+  const novoId = await criarFuncionarioNoDataverse(dados);
+
+  try {
+    const funcionariosAtualizados = await carregarFuncionarios();
+    console.info("Funcionário cadastrado no Dataverse:", novoId);
     return funcionariosAtualizados;
-
   } catch (erro) {
     console.error(
       "Funcionário criado, mas falha ao atualizar a lista:",
@@ -874,10 +1476,9 @@ export async function criarFuncionario(
     );
 
     throw new Error(
-      `O funcionário ${nome} foi criado no Dataverse ` +
-      `(ID: ${novoId}), mas não foi possível atualizar ` +
-      "a lista. Não repita o cadastro. Atualize os dados."
+      `O funcionário foi criado no Dataverse (ID: ${novoId}), ` +
+      "mas não foi possível atualizar a lista. Não repita o cadastro. " +
+      "Atualize os dados."
     );
   }
 }
-

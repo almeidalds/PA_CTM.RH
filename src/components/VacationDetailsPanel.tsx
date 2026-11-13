@@ -3,285 +3,199 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
+import React from "react";
 import {
-  X,
-  Calendar,
-  Layers,
-  Clock,
-  Briefcase,
-  AlertTriangle,
-  ClipboardCheck,
-  Check,
-  ShieldCheck,
+  CalendarDays,
+  CalendarRange,
+  Clock3,
+  FileEdit,
   Plane,
-  BadgeAlert,
-  User,
-  Tags,
-  BadgeCent
+  X,
 } from "lucide-react";
-import { RhEmployee } from "../types/rh";
+import type { RhEmployee } from "../types/rh";
 import { formatarDataBR } from "../utils/dateUtils";
 import {
-  calcularTempoTrabalho,
-  calcularStatusFerias,
-  calcularDiasFerias,
   calcularDiasVendidos,
-  calcularDiasTirados,
-  calcularPeriodosFerias,
-  identificarAlertaFerias,
-  gerarRecomendacaoFerias
+  calcularStatusFerias,
+  calcularTempoTrabalho,
 } from "../utils/vacationUtils";
 
 interface VacationDetailsPanelProps {
   employee: RhEmployee | null;
   onClose: () => void;
+  onConfigureVacation: (employee: RhEmployee) => void;
 }
+
+const statusTone = (status: string): string => {
+  if (status === "F\u00e9rias cr\u00edticas") {
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  }
+  if (status === "Apto para f\u00e9rias") {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+  if (status === "F\u00e9rias em andamento") {
+    return "border-sky-200 bg-sky-50 text-yinmn";
+  }
+  if (status === "F\u00e9rias conclu\u00eddas") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+  return "border-slate-200 bg-slate-50 text-slate-600";
+};
 
 export const VacationDetailsPanel: React.FC<VacationDetailsPanelProps> = ({
   employee,
-  onClose
+  onClose,
+  onConfigureVacation,
 }) => {
-  const [copiedSummary, setCopiedSummary] = useState(false);
-
   if (!employee) return null;
 
-  const tempoTrabalho = calcularTempoTrabalho(employee.dataAdmissao);
-  const statusFerias = calcularStatusFerias(employee);
-  const diasTotais = calcularDiasFerias(employee);
-  const diasVendidos = calcularDiasVendidos(employee);
-  const diasTirados = calcularDiasTirados(employee);
-  const periodosCount = calcularPeriodosFerias(employee);
-  const alerta = identificarAlertaFerias(employee);
-  const recomendacao = gerarRecomendacaoFerias(employee);
-
-  const handleCopySummary = () => {
-    const periodosText = (employee.periodosFerias || [])
-      .map((p, idx) => `  - Período ${idx + 1}: De ${formatarDataBR(p.dataInicio)} até ${formatarDataBR(p.dataFim)} (${p.dias} dias)`)
-      .join("\n") || "  - Nenhum período programado";
-
-    const resumo = `Resumo de Férias do Instrutor:
-Nome: ${employee.nome}
-ID Funcional: ${employee.idFuncionario || "ID Pendente"}
-Cargo: ${employee.cargo}
-Admissão: ${formatarDataBR(employee.dataAdmissao)}
-Tempo de Trabalho: ${tempoTrabalho.texto}
-Status de Férias: ${statusFerias}
-Alerta: ${alerta.label}
-Dias de Férias: ${diasTotais}
-Dias Vendidos: ${diasVendidos}
-Dias Tirados: ${diasTirados}
-Períodos Divididos: ${periodosCount}
-Períodos Programados:
-${periodosText}
-Recomendação: ${recomendacao}`;
-
-    navigator.clipboard.writeText(resumo);
-    setCopiedSummary(true);
-    setTimeout(() => setCopiedSummary(false), 2000);
-  };
+  const status = calcularStatusFerias(employee);
+  const workTime = calcularTempoTrabalho(employee.dataAdmissao);
+  const soldDays = calcularDiasVendidos(employee);
+  const periods = [...(employee.periodosFerias || [])]
+    .sort((left, right) => left.dataInicio.localeCompare(right.dataInicio));
+  const scheduledDays = periods.reduce((total, period) => total + period.dias, 0);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden flex justify-end" role="dialog" aria-modal="true">
-      {/* Backdrop overlay */}
+    <div
+      className="fixed inset-0 z-50 flex justify-end overflow-hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="vacation-details-title"
+    >
       <div
-        className="absolute inset-0 bg-oxford/40 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Flyout panel */}
-      <div className="relative w-full max-w-xl bg-[#f0f3fa] h-full shadow-[0_0_70px_rgba(57,88,134,0.28)] flex flex-col z-10 transition-all duration-300 transform sm:rounded-l-[28px] overflow-hidden">
-        {/* Header */}
-        <div className="bg-oxford text-white p-6 flex items-center justify-between border-b border-cadet">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-cadet rounded-xl flex items-center justify-center border border-yinmn/20">
-              <Plane className="w-5 h-5 text-jordy" />
+      <div className="relative z-10 flex h-full w-full max-w-lg flex-col overflow-hidden bg-slate-50 shadow-[0_0_70px_rgba(0,48,87,0.28)] sm:rounded-l-[28px]">
+        <header className="border-b border-sky-100 bg-white px-5 py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-yinmn to-cadet text-white shadow-[0_8px_20px_rgba(0,97,132,0.22)]">
+                <Plane className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <span className="block text-[9px] font-bold uppercase tracking-[0.16em] text-yinmn">
+                  {"Ficha de f\u00e9rias"}
+                </span>
+                <h2 id="vacation-details-title" className="truncate text-base font-extrabold text-oxford">
+                  {employee.nome}
+                </h2>
+                <p className="mt-0.5 font-mono text-[10px] font-semibold text-slate-400">
+                  {employee.idFuncionario || "ID pendente"}
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-sm font-extrabold tracking-tight truncate max-w-[280px]">
-                Ficha de Férias: {employee.nome}
-              </h2>
-              <p className="text-[10px] text-jordy font-mono font-bold mt-0.5">
-                {employee.idFuncionario || "ID Pendente"}
-              </p>
-            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl p-2 text-slate-400 transition hover:bg-sky-50 hover:text-yinmn"
+              aria-label="Fechar ficha de ferias"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-xl text-jordy hover:text-white hover:bg-cadet transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        </header>
 
-        {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar">
-          
-          {/* Alerta Atual & Status Principal */}
-          <div className="p-4 rounded-2xl border flex flex-col gap-2.5 bg-sky-50 border-sky-100">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <span className="text-[9px] uppercase font-black text-slate-400 tracking-wider">Situação Cadastral de Férias</span>
-              <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full border ${alerta.color} flex items-center gap-1.5`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${alerta.dotColor}`} />
-                <span>{alerta.label}</span>
+        <div className="flex-1 space-y-5 overflow-y-auto p-5">
+          <section className="rounded-2xl border border-sky-100 bg-white p-4 shadow-[0_8px_20px_rgba(0,48,87,0.04)]">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+              {"Situa\u00e7\u00e3o atual"}
+            </span>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+              <span className={`inline-flex rounded-full border px-3 py-1.5 text-[10px] font-bold ${statusTone(status)}`}>
+                {status}
+              </span>
+              <span className="text-[10px] font-semibold text-slate-400">
+                {"Admiss\u00e3o: "}{formatarDataBR(employee.dataAdmissao)}
               </span>
             </div>
+            <p className="mt-3 border-t border-sky-100 pt-3 text-[11px] font-medium text-slate-500">
+              {"Tempo na equipe: "}<strong className="text-oxford">{workTime.texto}</strong>
+            </p>
+          </section>
 
-            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-sky-100">
-              <div>
-                <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">Tempo de Trabalho</span>
-                <span className="text-xs font-bold text-oxford">{tempoTrabalho.texto}</span>
-              </div>
-              <div>
-                <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">Admissão</span>
-                <span className="text-xs font-bold text-oxford">{formatarDataBR(employee.dataAdmissao)}</span>
-              </div>
+          <section aria-label="Resumo das ferias" className="grid grid-cols-3 gap-2.5">
+            <div className="rounded-2xl border border-sky-100 bg-white p-3 text-center">
+              <CalendarRange className="mx-auto h-4 w-4 text-yinmn" />
+              <strong className="mt-1.5 block text-lg font-black text-oxford">{periods.length}</strong>
+              <span className="block text-[9px] font-bold uppercase text-slate-400">
+                {periods.length === 1 ? "Per\u00edodo" : "Per\u00edodos"}
+              </span>
             </div>
-          </div>
-
-          {/* Dados do Cargo e Turno */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-400">Lotação do Instrutor</h3>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-slate-50/50 p-2.5 rounded-xl border border-sky-50">
-                <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">Cargo</span>
-                <p className="text-xs font-extrabold text-oxford truncate">{employee.cargo}</p>
-              </div>
-
-              <div className="bg-slate-50/50 p-2.5 rounded-xl border border-sky-50">
-                <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">Zona</span>
-                <p className="text-xs font-extrabold text-oxford truncate">{employee.zona || "Não cadastrada"}</p>
-              </div>
-
-              <div className="bg-slate-50/50 p-2.5 rounded-xl border border-sky-50">
-                <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">Turno</span>
-                <p className="text-xs font-extrabold text-oxford truncate">{employee.turno || "Não cadastrado"}</p>
-              </div>
+            <div className="rounded-2xl border border-sky-100 bg-white p-3 text-center">
+              <CalendarDays className="mx-auto h-4 w-4 text-yinmn" />
+              <strong className="mt-1.5 block text-lg font-black text-oxford">{scheduledDays}</strong>
+              <span className="block text-[9px] font-bold uppercase text-slate-400">Dias de gozo</span>
             </div>
-          </div>
-
-          {/* Detalhes de Direito e Saldos */}
-          <div className="space-y-4">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-400">Métricas e Direitos</h3>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-slate-50/50 p-3 rounded-xl border border-sky-50">
-                <div className="flex items-center gap-1.5 text-slate-400 mb-1">
-                  <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                  <span className="text-[9px] uppercase font-bold tracking-wider">Direito Adquirido</span>
-                </div>
-                <p className={`text-xs font-extrabold ${tempoTrabalho.totalMeses >= 12 ? "text-emerald-600" : "text-slate-400"}`}>
-                  {tempoTrabalho.totalMeses >= 12 ? "SIM (Apto a gozar)" : "NÃO (Menor de 1 ano)"}
-                </p>
-              </div>
-
-              <div className="bg-slate-50/50 p-3 rounded-xl border border-sky-50">
-                <div className="flex items-center gap-1.5 text-slate-400 mb-1">
-                  <Calendar className="w-4 h-4 text-yinmn" />
-                  <span className="text-[9px] uppercase font-bold tracking-wider">Férias Programadas</span>
-                </div>
-                <p className={`text-xs font-extrabold ${employee.feriasMarcadas ? "text-yinmn" : "text-amber-600"}`}>
-                  {employee.feriasMarcadas ? "Sim, Registradas" : "Não Marcadas"}
-                </p>
-              </div>
+            <div className="rounded-2xl border border-amber-100 bg-amber-50/70 p-3 text-center">
+              <Clock3 className="mx-auto h-4 w-4 text-amber-600" />
+              <strong className="mt-1.5 block text-lg font-black text-amber-700">{soldDays}</strong>
+              <span className="block text-[9px] font-bold uppercase text-amber-600">Dias de abono</span>
             </div>
+          </section>
 
-            {/* Balanço de Dias */}
-            <div className="bg-white p-4 rounded-2xl border border-sky-100 shadow-sm grid grid-cols-3 gap-3 text-center">
-              <div>
-                <span className="text-[9px] uppercase font-black text-slate-400 block">Dias Totais</span>
-                <span className="text-base font-black text-oxford block mt-0.5">{diasTotais}</span>
-                <span className="text-[9px] text-slate-400 font-semibold block mt-0.5">Saldo padrão</span>
-              </div>
-              <div className="border-x border-sky-100">
-                <span className="text-[9px] uppercase font-black text-amber-600 block">Dias Vendidos</span>
-                <span className="text-base font-black text-amber-600 block mt-0.5">{diasVendidos}</span>
-                <span className="text-[9px] text-amber-500 font-semibold block mt-0.5">Abono pecuniário</span>
-              </div>
-              <div>
-                <span className="text-[9px] uppercase font-black text-emerald-600 block">Dias Tirados</span>
-                <span className="text-base font-black text-emerald-600 block mt-0.5">{diasTirados}</span>
-                <span className="text-[9px] text-emerald-500 font-semibold block mt-0.5">Dias de gozo</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Detalhamento dos Períodos de Férias */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black uppercase tracking-wider text-slate-400">
-                Períodos de Férias ({periodosCount})
+          <section className="space-y-3">
+            <div>
+              <h3 className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">
+                {"Per\u00edodos registrados"}
               </h3>
-              {employee.feriasVendidas && (
-                <span className="text-[9px] uppercase font-black bg-amber-50 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200">
-                  Abono Solicitado
-                </span>
-              )}
+              <p className="mt-0.5 text-[10px] text-slate-400">
+                {"Datas cadastradas para o colaborador."}
+              </p>
             </div>
 
-            <div className="space-y-2.5">
-              {employee.periodosFerias && employee.periodosFerias.map((period, i) => (
-                <div key={i} className="p-3 bg-sky-50 border border-sky-100 rounded-xl flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-sky-100 text-yinmn rounded-lg flex items-center justify-center font-black text-xs">
-                      {i + 1}º
+            {periods.length > 0 ? (
+              <div className="space-y-2.5">
+                {periods.map((period, index) => (
+                  <div
+                    key={period.recordId || `${period.dataInicio}-${index}`}
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-sky-100 bg-white p-3.5 shadow-[0_6px_16px_rgba(0,48,87,0.035)]"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-[10px] font-black text-yinmn">
+                        {index + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <span className="block text-[9px] font-bold uppercase text-slate-400">
+                          {"Per\u00edodo de gozo"}
+                        </span>
+                        <strong className="mt-0.5 block text-xs text-oxford">
+                          {formatarDataBR(period.dataInicio)} a {formatarDataBR(period.dataFim)}
+                        </strong>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-[9px] font-bold text-yinmn uppercase block">Período de Gozo</span>
-                      <p className="text-xs font-bold text-oxford mt-0.5">
-                        De {formatarDataBR(period.dataInicio)} até {formatarDataBR(period.dataFim)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <span className="text-xs font-black text-yinmn bg-sky-50 px-2.5 py-1 rounded-lg border border-sky-100">
+                    <span className="shrink-0 rounded-lg bg-sky-50 px-2.5 py-1 text-[10px] font-bold text-yinmn">
                       {period.dias} dias
                     </span>
                   </div>
-                </div>
-              ))}
-
-              {(!employee.periodosFerias || employee.periodosFerias.length === 0) && (
-                <div className="p-6 border border-dashed border-sky-100 rounded-xl text-center text-slate-400 bg-slate-50/20">
-                  <Calendar className="w-8 h-8 mx-auto text-jordy mb-1.5" />
-                  <p className="text-xs font-semibold">Nenhuma escala de férias programada para este instrutor.</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Recomendação Automática */}
-          <div className="p-4 rounded-xl bg-oxford text-white border border-cadet space-y-2">
-            <div className="flex items-center gap-2 text-jordy">
-              <BadgeAlert className="w-4 h-4 text-jordy" />
-              <h4 className="text-xs font-black uppercase tracking-wider text-jordy">Recomendação de Gestão</h4>
-            </div>
-            <p className="text-xs font-semibold leading-relaxed text-sky-300">
-              {recomendacao}
-            </p>
-          </div>
-
-        </div>
-
-        {/* Footer Actions */}
-        <div className="p-4 bg-slate-50 border-t border-sky-100 flex gap-2">
-          <button
-            onClick={handleCopySummary}
-            className="flex-1 text-xs bg-white hover:bg-sky-50 text-slate-500 hover:text-yinmn font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-1.5 transition-all border border-sky-100 active:scale-[0.98]"
-          >
-            {copiedSummary ? (
-              <>
-                <Check className="w-4 h-4 text-emerald-500" />
-                <span className="text-emerald-600">Copiado com Sucesso!</span>
-              </>
+                ))}
+              </div>
             ) : (
-              <>
-                <ClipboardCheck className="w-4 h-4" />
-                <span>Copiar Ficha de Férias</span>
-              </>
+              <div className="rounded-2xl border border-dashed border-sky-200 bg-white p-7 text-center">
+                <CalendarDays className="mx-auto h-7 w-7 text-jordy" />
+                <p className="mt-2 text-xs font-bold text-slate-600">
+                  {"Nenhum per\u00edodo de f\u00e9rias registrado."}
+                </p>
+                <p className="mt-1 text-[10px] text-slate-400">
+                  {"Use o bot\u00e3o abaixo para cadastrar as datas."}
+                </p>
+              </div>
             )}
-          </button>
+          </section>
         </div>
+
+        <footer className="border-t border-sky-100 bg-white p-4">
+          <button
+            type="button"
+            onClick={() => onConfigureVacation(employee)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-yinmn px-4 py-3 text-xs font-bold text-white shadow-[0_8px_18px_rgba(0,97,132,0.22)] transition hover:bg-cadet active:scale-[0.99]"
+          >
+            <FileEdit className="h-4 w-4" />
+            {"Configurar f\u00e9rias"}
+          </button>
+        </footer>
       </div>
     </div>
   );

@@ -11,19 +11,16 @@ import {
   CheckCircle,
   Clock,
   Search,
-  Filter,
   User,
   ExternalLink,
-  BookOpen,
   Calendar,
   AlertOctagon,
   RefreshCw,
   FolderMinus
 } from "lucide-react";
-import { RhEmployee, Substitution, AbsenceItem } from "../types/rh";
+import { RhEmployee, AbsenceItem } from "../types/rh";
 import { formatarDataBR, calcularDiasRestantes, getToday } from "../utils/dateUtils";
-import { obterSubstituicoes } from "../services/additionalDataSource";
-import { validarLimiteAusencias, calcularMapaOcupacaoDias } from "../utils/absenceUtils";
+import { calcularMapaOcupacaoDias } from "../utils/absenceUtils";
 import { identificarPendencias } from "../utils/riskUtils";
 
 export type LocalAlertSeverity = "Crítica" | "Alta" | "Média" | "Baixa" | "Informativa";
@@ -44,12 +41,53 @@ interface AlertsPageProps {
   employees: RhEmployee[];
   onSelectEmployee: (emp: RhEmployee) => void;
   onRefreshData?: () => void;
+  onAlertCountChange?: (count: number) => void;
+}
+
+const ALERT_WORKFLOW_KEY = "ctm_rh_alert_workflow";
+
+type AlertWorkflow = {
+  assignedUsers: Record<string, string>;
+  alertStatuses: Record<string, SystemAlert["status"]>;
+};
+
+const EMPTY_WORKFLOW: AlertWorkflow = {
+  assignedUsers: {},
+  alertStatuses: {},
+};
+
+function carregarFluxoAlertas(): AlertWorkflow {
+  try {
+    const stored = localStorage.getItem(ALERT_WORKFLOW_KEY);
+    if (!stored) return EMPTY_WORKFLOW;
+
+    const parsed: unknown = JSON.parse(stored);
+    if (!parsed || typeof parsed !== "object") {
+      throw new Error("Os dados locais do painel de alertas são inválidos.");
+    }
+
+    const workflow = parsed as Partial<AlertWorkflow>;
+    return {
+      assignedUsers:
+        workflow.assignedUsers && typeof workflow.assignedUsers === "object"
+          ? workflow.assignedUsers
+          : {},
+      alertStatuses:
+        workflow.alertStatuses && typeof workflow.alertStatuses === "object"
+          ? workflow.alertStatuses
+          : {},
+    };
+  } catch (error) {
+    console.error("Não foi possível carregar o acompanhamento local dos alertas:", error);
+    return EMPTY_WORKFLOW;
+  }
 }
 
 export const AlertsPage: React.FC<AlertsPageProps> = ({
   employees,
   onSelectEmployee,
-  onRefreshData
+  onRefreshData,
+  onAlertCountChange,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSeverity, setSelectedSeverity] = useState<string>("all");
@@ -57,13 +95,23 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
   const [alerts, setAlerts] = useState<SystemAlert[]>([]);
-  const [assignedUsers, setAssignedUsers] = useState<Record<string, string>>({});
-  const [alertStatuses, setAlertStatuses] = useState<Record<string, string>>({});
+  const [workflow, setWorkflow] = useState<AlertWorkflow>(carregarFluxoAlertas);
+  const [storageError, setStorageError] = useState("");
+  const { assignedUsers, alertStatuses } = workflow;
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(ALERT_WORKFLOW_KEY, JSON.stringify(workflow));
+      setStorageError("");
+    } catch (error) {
+      console.error("Não foi possível salvar o acompanhamento local dos alertas:", error);
+      setStorageError("Não foi possível salvar as atribuições e os status neste navegador.");
+    }
+  }, [workflow]);
 
   // MOTOR DINÂMICO DE GERAÇÃO DE ALERTAS
   useEffect(() => {
     const list: SystemAlert[] = [];
-    const substitutions = obterSubstituicoes();
 
     // 1. Verificar Contratos Vencendo ou Vencidos
     employees.forEach((emp) => {
@@ -97,37 +145,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
       }
     });
 
-    // 2. Verificar Férias sem Cobertura cadastrada
-    employees.forEach((emp) => {
-      if (emp.statusFuncionario === "Ativo" && emp.periodosFerias) {
-        emp.periodosFerias.forEach((f, idx) => {
-          // Checar se há substituição correspondente com substituto definido
-          const temSubstituto = substitutions.some(
-            (s) =>
-              s.instrutorAusente === emp.nome &&
-              s.dataInicio === f.dataInicio &&
-              s.substituto &&
-              s.substituto.trim() !== "" &&
-              s.status !== "Cancelada"
-          );
-
-          if (!temSubstituto) {
-            list.push({
-              alertId: `alert-no-cover-${emp.recordId}-${idx}`,
-              tipo: "Férias sem cobertura cadastrada",
-              descricao: `Férias programadas para ${emp.nome} de ${formatarDataBR(f.dataInicio)} a ${formatarDataBR(f.dataFim)} não possuem Funcionário substituto homologado no sistema.`,
-              gravidade: "Alta",
-              categoria: "Férias",
-              dataGeracao: getToday(),
-              status: "Novo",
-              relatedEmployeeId: emp.recordId
-            });
-          }
-        });
-      }
-    });
-
-    // 3. Verificar Direito Adquirido Acumulado
+    // 2. Verificar Direito Adquirido Acumulado
     employees.forEach((emp) => {
       if (emp.statusFuncionario === "Ativo" && emp.direitoAdquirido) {
         // Se já passou o período limite ou tem mais de 30 dias de direito e não tem férias gozadas
@@ -180,18 +198,6 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
         });
       });
     });
-    substitutions.forEach((s) => {
-      if (s.status !== "Cancelada") {
-        ausencias.push({
-          id: s.recordId,
-          nome: s.instrutorAusente,
-          dataInicio: s.dataInicio,
-          dataFim: s.dataFim,
-          tipo: s.motivo
-        });
-      }
-    });
-
     const mapaOcupacao = calcularMapaOcupacaoDias(ausencias);
     const diasExcedidos = Object.keys(mapaOcupacao).filter((dia) => mapaOcupacao[dia].length > 8);
 
@@ -209,19 +215,40 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
       });
     }
 
-    const mapped = list.map(a => ({...a, status: (alertStatuses[a.alertId] as SystemAlert["status"]) || a.status}));
+    const mapped = list.map((alert) => ({
+      ...alert,
+      status: alertStatuses[alert.alertId] || alert.status,
+    }));
     setAlerts(mapped);
-  }, [employees]);
+  }, [employees, alertStatuses]);
+
+  useEffect(() => {
+    const openAlerts = alerts.filter(
+      (alert) =>
+        alertStatuses[alert.alertId] !== "Resolvido" &&
+        alertStatuses[alert.alertId] !== "Ignorado"
+    ).length;
+    onAlertCountChange?.(openAlerts);
+  }, [alerts, alertStatuses, onAlertCountChange]);
 
   const handleStatusChange = (id: string, newStatus: string) => {
-    setAlertStatuses(prev => ({...prev, [id]: newStatus as SystemAlert["status"]}));
+    setWorkflow((previous) => ({
+      ...previous,
+      alertStatuses: {
+        ...previous.alertStatuses,
+        [id]: newStatus as SystemAlert["status"],
+      },
+    }));
   };
 
   const handleAssignResponsibility = (id: string, name: string) => {
-    setAssignedUsers({
-      ...assignedUsers,
-      [id]: name
-    });
+    setWorkflow((previous) => ({
+      ...previous,
+      assignedUsers: {
+        ...previous.assignedUsers,
+        [id]: name,
+      },
+    }));
   };
 
   const getSeverityBadge = (sev: LocalAlertSeverity) => {
@@ -256,9 +283,10 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
   const filteredAlerts = alerts
     .filter((a) => {
       // Excluir ou marcar resolvido localmente
-      const stateResolved = alertStatuses[a.alertId] === "Resolvido";
+      const status = alertStatuses[a.alertId] || a.status;
+      const stateResolved = status === "Resolvido";
       if (selectedStatus === "Resolvido" && !stateResolved) return false;
-      if (selectedStatus === "Pendente" && stateResolved) return false;
+      if (selectedStatus === "Pendente" && (stateResolved || status === "Ignorado")) return false;
 
       const matchesSearch =
         a.tipo.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -271,26 +299,61 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
     });
 
   // KPI Counters
-  const countCriticos = alerts.filter((a) => a.gravidade === "Crítica" && alertStatuses[a.alertId] !== "Resolvido").length;
-  const countAltos = alerts.filter((a) => a.gravidade === "Alta" && alertStatuses[a.alertId] !== "Resolvido").length;
-  const countMedios = alerts.filter((a) => a.gravidade === "Média" && alertStatuses[a.alertId] !== "Resolvido").length;
-  const countResolvidos = Object.values(alertStatuses).filter(s => s === "Resolvido").length;
+  const countCriticos = alerts.filter(
+    (alert) =>
+      alert.gravidade === "Crítica" &&
+      alertStatuses[alert.alertId] !== "Resolvido" &&
+      alertStatuses[alert.alertId] !== "Ignorado"
+  ).length;
+  const countAltos = alerts.filter(
+    (alert) =>
+      alert.gravidade === "Alta" &&
+      alertStatuses[alert.alertId] !== "Resolvido" &&
+      alertStatuses[alert.alertId] !== "Ignorado"
+  ).length;
+  const countMedios = alerts.filter(
+    (alert) =>
+      alert.gravidade === "Média" &&
+      alertStatuses[alert.alertId] !== "Resolvido" &&
+      alertStatuses[alert.alertId] !== "Ignorado"
+  ).length;
+  const countResolvidos = alerts.filter(
+    (alert) => alertStatuses[alert.alertId] === "Resolvido"
+  ).length;
 
   return (
     <div className="space-y-6">
       {/* Page Title */}
-      <div className="rounded-[22px] border border-white bg-gradient-to-br from-[#d5deef] to-[#f0f3fa] p-5 shadow-[0_12px_30px_rgba(57,88,134,0.07)]">
+      <div className="rounded-[22px] border border-white bg-gradient-to-br from-slate-100 to-white p-5 shadow-[0_12px_30px_rgba(0,48,87,0.07)]">
         <h2 className="text-lg sm:text-xl font-bold text-oxford flex items-center gap-2.5">
           <Bell className="w-5 h-5 text-yinmn animate-swing" />
           <span>Central de Alertas Operacionais Inteligentes</span>
         </h2>
         <p className="text-xs text-slate-400 font-medium mt-1">
-          Algoritmo de cruzamento em tempo real que audita vencimentos, ausências simultâneas e falhas de cobertura dos Funcionários.
+          Alertas gerados a partir dos cadastros atuais de funcionários, férias e contratos.
         </p>
+        <p className="mt-2 text-[10px] font-medium text-slate-500">
+          Status e responsáveis são salvos somente neste navegador; não são compartilhados nem gravados no Dataverse.
+        </p>
+        {storageError && (
+          <p role="alert" className="mt-2 text-xs font-semibold text-rose-600">
+            {storageError}
+          </p>
+        )}
+        {onRefreshData && (
+          <button
+            type="button"
+            onClick={onRefreshData}
+            className="mt-3 inline-flex items-center gap-2 rounded-lg border border-sky-100 bg-white px-3 py-2 text-xs font-bold text-yinmn hover:bg-sky-50"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Atualizar dados
+          </button>
+        )}
       </div>
 
       {/* KPI Stats Panel */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="adaptive-grid gap-3">
         <div className="p-4 bg-red-50 rounded-2xl border border-red-100 flex items-center justify-between">
           <div>
             <span className="text-[9px] uppercase font-black text-red-600 tracking-wider">Alertas Críticos</span>
@@ -325,7 +388,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
       </div>
 
       {/* Filter and search actions */}
-      <div className="bg-white p-4 rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(57,88,134,0.06)] flex flex-col lg:flex-row gap-3">
+      <div className="bg-white p-4 rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(0,48,87,0.06)] flex flex-col lg:flex-row gap-3">
         <div className="flex-1 relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
@@ -360,7 +423,6 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
             <option value="all">Categoria (Todas)</option>
             <option value="Contrato">Contrato</option>
             <option value="Férias">Férias</option>
-            <option value="Substituição">Substituição</option>
             <option value="Cadastro">Cadastro</option>
             <option value="Risco">Risco</option>
           </select>
@@ -381,7 +443,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
       {/* Live Alerts Stream Feed */}
       <div className="space-y-3.5">
         {filteredAlerts.map((alert) => {
-          const status = alert.status || "Novo";
+          const status = alertStatuses[alert.alertId] || alert.status || "Novo";
           const isResolved = status === "Resolvido";
           const isIgnored = status === "Ignorado";
           const currentAssignee = assignedUsers[alert.alertId] || "";
@@ -498,7 +560,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
         })}
 
         {filteredAlerts.length === 0 && (
-          <div className="bg-white rounded-[26px] p-10 text-center border border-sky-100/50 shadow-[0_12px_30px_rgba(57,88,134,0.06)] text-slate-400 font-semibold">
+          <div className="bg-white rounded-[26px] p-10 text-center border border-sky-100/50 shadow-[0_12px_30px_rgba(0,48,87,0.06)] text-slate-400 font-semibold">
             <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto mb-2" />
             <h3 className="text-sm font-black text-oxford">Excelente! Central Totalmente Limpa</h3>
             <p className="text-xs text-slate-400 font-medium mt-1">Todos os riscos operacionais, inconsistências e férias vencidas estão devidamente monitorados.</p>

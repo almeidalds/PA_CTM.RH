@@ -9,7 +9,7 @@
   "buildPath": "./dist",
   "buildEntryPoint": "index.html",
   "localAppUrl": "http://localhost:3000",
-  "logoPath": "Default",
+  "logoPath": "./logo/app-icon-512.png",
   "connectionReferences": {},
   "databaseReferences": {
     "default.cds": {
@@ -67,6 +67,16 @@
         "users": {
           "entitySetName": "systemusers",
           "logicalName": "systemuser",
+          "isHidden": false
+        },
+        "rhcontrata__esfuturas": {
+          "entitySetName": "ctmbrasi_rhcontratacoesfuturases",
+          "logicalName": "ctmbrasi_rhcontratacoesfuturas",
+          "isHidden": false
+        },
+        "environment_39a902ba": {
+          "entitySetName": "Environment",
+          "logicalName": "environment_39a902ba",
           "isHidden": false
         }
       },

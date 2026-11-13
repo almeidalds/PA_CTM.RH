@@ -61,7 +61,7 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
   ].filter(Boolean).length;
 
   return (
-    <div className="mb-6 overflow-hidden rounded-[20px] border border-sky-100 bg-white shadow-[0_10px_28px_rgba(57,88,134,0.07)]">
+    <div className="mb-6 overflow-hidden rounded-[20px] border border-sky-100 bg-white shadow-[0_10px_28px_rgba(0,48,87,0.07)]">
       <button
         type="button"
         onClick={() => setIsExpanded((expanded) => !expanded)}

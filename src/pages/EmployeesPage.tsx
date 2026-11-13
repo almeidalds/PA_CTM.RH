@@ -43,7 +43,8 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({
   const [newEmployee, setNewEmployee] = useState<RhEmployee | null>(null);
   const openCreate = () => setNewEmployee({
     recordId: "", idFuncionario: "", nome: "", cargo: "", zona: "", turno: "",
-    dataAdmissao: "", dataTerminoReal: "", statusFuncionario: "Ativo", idiomas: [],
+    dataAdmissao: "", dataTerminoReal: "", statusFuncionario: "Ativo",
+    statusDataverse: 583150000, statusRegistro: 0, idiomas: [],
     emailCorporativo: "", linkZoom: "", feriasMarcadas: false, feriasConcluidas: false,
     feriasVendidas: false, diasVendidosFerias: 0, diasTotaisFerias: 0, periodosFerias: [],
   });
@@ -124,7 +125,7 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({
   return (
     <div className="space-y-6">
       {/* Page Title Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-[22px] border border-white bg-gradient-to-br from-[#d5deef] to-[#f0f3fa] p-5 shadow-[0_12px_30px_rgba(57,88,134,0.07)]">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-[22px] border border-white bg-gradient-to-br from-slate-100 to-white p-5 shadow-[0_12px_30px_rgba(0,48,87,0.07)]">
         <div>
           <h2 className="text-lg sm:text-xl font-bold text-oxford flex items-center gap-2.5">
             <Users className="w-5 h-5 text-yinmn" />
@@ -136,7 +137,7 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
-          <button type="button" onClick={openCreate} className="flex items-center gap-2 rounded-xl bg-yinmn px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-oxford focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yinmn focus-visible:ring-offset-2"><UserPlus className="h-4 w-4" />Novo funcionário</button>
+          <button type="button" onClick={openCreate} className="flex items-center gap-2 rounded-xl bg-yinmn px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-cadet focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yinmn focus-visible:ring-offset-2"><UserPlus className="h-4 w-4" />Novo funcionário</button>
         </div>
       </div>
 
@@ -150,7 +151,7 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({
 
       {/* Responsive Card Grid list */}
       {filteredEmployees.length === 0 ? (
-        <div className="bg-white rounded-[22px] border border-sky-100/75 p-12 text-center shadow-[0_12px_30px_rgba(57,88,134,0.06)]">
+        <div className="bg-white rounded-[22px] border border-sky-100/75 p-12 text-center shadow-[0_12px_30px_rgba(0,48,87,0.06)]">
           <HelpCircle className="w-12 h-12 text-sky-200 mx-auto mb-3" />
           <h3 className="text-base font-bold text-oxford mb-1">Nenhum funcionário encontrado</h3>
           <p className="text-xs text-slate-400 max-w-sm mx-auto">

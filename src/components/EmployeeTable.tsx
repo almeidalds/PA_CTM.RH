@@ -90,7 +90,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
 
   if (employees.length === 0) {
     return (
-      <div className="bg-white rounded-[20px] border border-sky-100 p-12 text-center shadow-[0_10px_28px_rgba(57,88,134,0.06)]">
+      <div className="bg-white rounded-[20px] border border-sky-100 p-12 text-center shadow-[0_10px_28px_rgba(0,48,87,0.06)]">
         <HelpCircle className="w-12 h-12 text-sky-200 mx-auto mb-3" />
         <h3 className="text-base font-bold text-oxford mb-1">Nenhum funcionário encontrado</h3>
         <p className="text-xs text-slate-400 font-semibold max-w-md mx-auto">
@@ -101,7 +101,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-[20px] border border-sky-100 shadow-[0_10px_28px_rgba(57,88,134,0.06)] overflow-hidden flex flex-col">
+    <div className="bg-white rounded-[20px] border border-sky-100 shadow-[0_10px_28px_rgba(0,48,87,0.06)] overflow-hidden flex flex-col">
       <div className="overflow-x-auto no-scrollbar">
         <table className="w-full min-w-[1100px] border-collapse">
           {/* Header */}

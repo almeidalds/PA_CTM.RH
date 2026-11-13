@@ -7,7 +7,7 @@
  * Aplicativo integrado ao Microsoft Dataverse
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { AppHeader } from "./components/AppHeader";
 import {
@@ -23,11 +23,13 @@ import { ReplacementPage } from "./pages/ReplacementPage";
 import { VacationsPage } from "./pages/VacationsPage";
 import { ContractsPage } from "./pages/ContractsPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { AlertsPage } from "./pages/AlertsPage";
+import { FutureHiresPage } from "./pages/FutureHiresPage";
 
-import { FloatingActionBar } from "./components/FloatingActionBar";
 import { SectionTabs } from "./components/SectionTabs";
 import { EmployeeDetailsPanel } from "./components/EmployeeDetailsPanel";
 import { PendingEditorPanel } from "./components/PendingEditorPanel";
+import { VacationFormPanel } from "./components/VacationFormPanel";
 
 import type {
   RhEmployee,
@@ -36,12 +38,20 @@ import type {
 
 import {
   carregarFuncionarios,
+  obterAvisoFechamentoContratos,
   salvarEdicaoFuncionario,
+  salvarFeriasFuncionario,
+  FuncionarioAtualizadoComAvisosError,
   criarFuncionario,
+  importarFuncionarios,
+  type EmployeeImportRow,
 } from "./services/rhDataSource";
 
 import {
   carregarCatalogosDataverse,
+  salvarCatalogosDataverse,
+  salvarTurnosDataverse,
+  type TurnoItem,
 } from "./services/dataverseCatalogs";
 
 import { calcularQualidadeDados } from "./utils/dataQualityUtils";
@@ -57,6 +67,7 @@ const CONFIGURACOES_VAZIAS: AppSettings = {
   idiomas: [],
   cargos: [],
   zonas: [],
+  turnos: [],
 };
 
 // ==========================================
@@ -75,13 +86,18 @@ export default function App() {
   const [appSettings, setAppSettings] =
     useState<AppSettings>(CONFIGURACOES_VAZIAS);
 
+  const [shiftsCatalog, setShiftsCatalog] = useState<TurnoItem[]>([]);
+
   const [loading, setLoading] = useState(true);
 
   const [dataError, setDataError] =
     useState<string>("");
 
+  const [systemAlertCount, setSystemAlertCount] = useState(0);
+
   const [mutationError, setMutationError] =
     useState<string>("");
+  const [mutationWarning, setMutationWarning] = useState(false);
 
   // ========================================
   // NAVEGAÇÃO
@@ -95,7 +111,7 @@ export default function App() {
 
   const [scheduleSubTab, setScheduleSubTab] =
     useState<
-      "vacations" | "substitutions" | "replacement"
+      "vacations" | "replacement"
     >("vacations");
 
   const [risksSubTab, setRisksSubTab] =
@@ -127,6 +143,11 @@ export default function App() {
     setEditingEmployee,
   ] = useState<RhEmployee | null>(null);
 
+  const [
+    vacationEmployee,
+    setVacationEmployee,
+  ] = useState<RhEmployee | null>(null);
+
   // ========================================
   // CARREGAR DADOS REAIS DO DATAVERSE
   // ========================================
@@ -135,17 +156,26 @@ export default function App() {
     setLoading(true);
     setDataError("");
     setMutationError("");
+    setMutationWarning(false);
 
     try {
       // Recuperar funcionários e relacionamentos.
       const funcionarios = await carregarFuncionarios();
+      const avisoContratos = obterAvisoFechamentoContratos();
 
       // Recuperar os catálogos corporativos.
       const catalogos =
         await carregarCatalogosDataverse();
 
+      setShiftsCatalog(catalogos.turnos);
+
       // Atualizar funcionários.
       setEmployees(funcionarios);
+
+      if (avisoContratos) {
+        setMutationError(avisoContratos);
+        setMutationWarning(true);
+      }
 
       // Utilizar apenas opções ativas nos formulários.
       setAppSettings({
@@ -160,11 +190,16 @@ export default function App() {
         zonas: catalogos.zonas
           .filter((item) => item.ativo)
           .map((item) => item.nome),
+
+        turnos: catalogos.turnos
+          .filter((item) => item.ativo)
+          .map((item) => item.nome),
       });
 
       // Fechar painéis que possam conter dados antigos.
       setSelectedEmployee(null);
       setEditingEmployee(null);
+      setVacationEmployee(null);
 
     } catch (error) {
       console.error(
@@ -219,6 +254,7 @@ export default function App() {
 
       setEmployees(listaAtualizada);
       setMutationError("");
+      setMutationWarning(false);
 
       setSelectedEmployee((atual) =>
         atual?.recordId === updated.recordId
@@ -230,12 +266,27 @@ export default function App() {
       );
 
     } catch (error) {
+      if (error instanceof FuncionarioAtualizadoComAvisosError) {
+        setEmployees(error.funcionariosAtualizados);
+        setSelectedEmployee((atual) =>
+          atual?.recordId === updated.recordId
+            ? error.funcionariosAtualizados.find(
+                (item) => item.recordId === updated.recordId
+              ) || null
+            : atual
+        );
+        setMutationError(error.message);
+        setMutationWarning(true);
+        return;
+      }
+
       const mensagem =
         error instanceof Error
           ? error.message
           : String(error);
 
       setMutationError(mensagem);
+      setMutationWarning(false);
 
       // Propagar o erro para o formulário.
       throw error;
@@ -256,6 +307,7 @@ export default function App() {
 
       setEmployees(listaAtualizada);
       setMutationError("");
+      setMutationWarning(false);
 
     } catch (error) {
       setMutationError(
@@ -263,9 +315,62 @@ export default function App() {
           ? error.message
           : String(error)
       );
+      setMutationWarning(false);
 
       throw error;
     }
+  };
+
+  const handleImportEmployees = async (
+    rows: EmployeeImportRow[],
+    onProgress: (completed: number, total: number) => void,
+  ) => {
+    const result = await importarFuncionarios(rows, onProgress);
+    if (result.employees) {
+      setEmployees(result.employees);
+      setMutationError("");
+      setMutationWarning(false);
+    }
+    if (result.refreshError) {
+      setMutationError(result.refreshError);
+      setMutationWarning(false);
+    }
+    return result;
+  };
+
+  const handleSaveShifts = async (shifts: TurnoItem[]) => {
+    const savedShifts = await salvarTurnosDataverse(shifts);
+    setShiftsCatalog(savedShifts);
+    setAppSettings((current) => ({
+      ...current,
+      turnos: savedShifts
+        .filter((shift) => shift.ativo)
+        .map((shift) => shift.nome),
+    }));
+    return savedShifts;
+  };
+
+  const handleSaveSettings = async (
+    settings: AppSettings,
+  ): Promise<AppSettings> => {
+    const catalogs = await salvarCatalogosDataverse(settings);
+    const savedSettings: AppSettings = {
+      idiomas: catalogs.idiomas
+        .filter((item) => item.ativo)
+        .map((item) => item.nome),
+      cargos: catalogs.cargos
+        .filter((item) => item.ativo)
+        .map((item) => item.nome),
+      zonas: catalogs.zonas
+        .filter((item) => item.ativo)
+        .map((item) => item.nome),
+      turnos: catalogs.turnos
+        .filter((item) => item.ativo)
+        .map((item) => item.nome),
+    };
+    setAppSettings(savedSettings);
+    setShiftsCatalog(catalogs.turnos);
+    return savedSettings;
   };
 
   // ========================================
@@ -277,6 +382,31 @@ export default function App() {
   ) => {
     setSelectedEmployee(null);
     setEditingEmployee(employee);
+  };
+
+  const handleConfigureVacation = (employee: RhEmployee) => {
+    setSelectedEmployee(null);
+    setVacationEmployee(employee);
+  };
+
+  const handleSaveVacation = async (updated: RhEmployee): Promise<void> => {
+    try {
+      const updatedEmployees = await salvarFeriasFuncionario(updated);
+      setEmployees(updatedEmployees);
+      setMutationError("");
+      setMutationWarning(false);
+    } catch (error) {
+      if (error instanceof FuncionarioAtualizadoComAvisosError) {
+        setEmployees(error.funcionariosAtualizados);
+        setMutationError(error.message);
+        setMutationWarning(true);
+        return;
+      }
+
+      setMutationError(error instanceof Error ? error.message : String(error));
+      setMutationWarning(false);
+      throw error;
+    }
   };
 
   // ========================================
@@ -299,13 +429,14 @@ export default function App() {
         "Férias críticas"
   ).length;
 
-  // Substituições ainda serão conectadas.
-  // Não contabilizar registros locais.
-  const systemAlertCount = criticalRiskCount;
+  const handleAlertCountChange = useCallback((count: number) => {
+    setSystemAlertCount(count);
+  }, []);
 
   const pageTitle: Record<TabId, string> = {
     dashboard: "Visão geral",
-    team: "Equipe e cadastros",
+    team: "Funcionários e Cadastros",
+    futureHires: "Contratações Futuras",
     schedule: "Escalas e ausências",
     risks: "Riscos e contratos",
     settings: "Configurações",
@@ -316,11 +447,11 @@ export default function App() {
   // ========================================
 
   return (
-    <div className="h-[100dvh] w-full overflow-hidden bg-white text-oxford font-sans">
+    <div className="h-dvh min-h-[100svh] w-full min-w-0 overflow-hidden bg-white text-oxford font-sans">
       <div
         className="
           app-workspace
-          flex h-full min-h-0 w-full
+          flex h-full min-h-0 w-full min-w-0
           overflow-hidden bg-white
         "
       >
@@ -365,7 +496,7 @@ export default function App() {
         className="
           flex-1 flex flex-col
           min-w-0 min-h-0 h-full
-          overflow-y-auto
+          overflow-x-hidden overflow-y-auto
         "
       >
 
@@ -396,6 +527,7 @@ export default function App() {
             flex-1
             max-w-[1440px]
             w-full
+            min-w-0
             mx-auto
             p-3 sm:p-4 lg:p-5 xl:p-6
             space-y-5
@@ -431,24 +563,22 @@ export default function App() {
           {mutationError && (
             <div
               role="alert"
-              className="
-                bg-rose-50
-                border border-rose-200
-                rounded-lg
-                p-4
-                text-sm
-                text-rose-800
-              "
+              className={`rounded-lg border p-4 text-sm ${
+                mutationWarning
+                  ? "border-amber-200 bg-amber-50 text-amber-900"
+                  : "border-rose-200 bg-rose-50 text-rose-800"
+              }`}
             >
-              <strong>Erro ao salvar:</strong>{" "}
+              <strong>{mutationWarning ? "Salvo com aviso:" : "Erro ao salvar:"}</strong>{" "}
               {mutationError}
 
               <button
                 type="button"
                 className="ml-3 underline"
-                onClick={() =>
+                onClick={() => {
                   setMutationError("")
-                }
+                  setMutationWarning(false);
+                }}
               >
                 Fechar
               </button>
@@ -523,7 +653,7 @@ export default function App() {
           {/* PÁGINAS DO SISTEMA                 */}
           {/* ================================= */}
 
-          {!loading && !dataError && (
+          {((!loading && !dataError) || activeTab === "futureHires") && (
             <>
 
               {/* DASHBOARD */}
@@ -554,7 +684,7 @@ export default function App() {
                     items={[
                       {
                         id: "list",
-                        label: "Quadro de Colaboradores",
+                        label: "Funcionários",
                       },
                       {
                         id: "pending",
@@ -605,7 +735,6 @@ export default function App() {
                       setScheduleSubTab(
                         id as
                           | "vacations"
-                          | "substitutions"
                           | "replacement"
                       )
                     }
@@ -613,11 +742,7 @@ export default function App() {
                     items={[
                       {
                         id: "vacations",
-                        label: "Controle de Férias",
-                      },
-                      {
-                        id: "substitutions",
-                        label: "Gestão de Substituições",
+                        label: "Férias e ausências",
                       },
                       {
                         id: "replacement",
@@ -630,52 +755,14 @@ export default function App() {
                     <VacationsPage
                       appSettings={appSettings}
                       employees={employees}
-
-                      onSave={async (
-                        updated,
-                        createSubst
-                      ) => {
-                        if (createSubst) {
-                          throw new Error(
-                            "A criação automática de " +
-                            "substituições será conectada " +
-                            "ao Dataverse em outra etapa."
-                          );
-                        }
-
-                        await handleSaveEmployee(updated);
-                      }}
+                      onConfigureVacation={handleConfigureVacation}
                     />
-                  )}
-
-                  {scheduleSubTab ===
-                    "substitutions" && (
-                    <div
-                      className="
-                        bg-white
-                        border border-slate-200
-                        rounded-lg p-6
-                      "
-                    >
-                      <h2 className="font-bold">
-                        Gestão de Substituições
-                      </h2>
-
-                      <p className="text-sm text-slate-500 mt-2">
-                        Esta área está temporariamente
-                        indisponível enquanto conectamos
-                        os registros de substituições
-                        ao Dataverse.
-                      </p>
-                    </div>
                   )}
 
                   {scheduleSubTab === "replacement" && (
                     <ReplacementPage
                       employees={employees}
-                      onSelectEmployee={
-                        setSelectedEmployee
-                      }
+                      languages={appSettings.idiomas}
                     />
                   )}
 
@@ -719,6 +806,7 @@ export default function App() {
                   {risksSubTab === "heatmap" && (
                     <RisksPage
                       employees={employees}
+                      catalogs={appSettings}
                       onSelectEmployee={
                         setSelectedEmployee
                       }
@@ -744,23 +832,14 @@ export default function App() {
                   )}
 
                   {risksSubTab === "alerts" && (
-                    <div
-                      className="
-                        bg-white
-                        border border-slate-200
-                        rounded-lg p-6
-                      "
-                    >
-                      <h2 className="font-bold">
-                        Alertas
-                      </h2>
-
-                      <p className="text-sm text-slate-500 mt-2">
-                        A integração dos registros e
-                        estados de alertas ao Dataverse
-                        será realizada em outra etapa.
-                      </p>
-                    </div>
+                    <AlertsPage
+                      employees={employees}
+                      onSelectEmployee={setSelectedEmployee}
+                      onRefreshData={() => {
+                        void reloadData();
+                      }}
+                      onAlertCountChange={handleAlertCountChange}
+                    />
                   )}
 
                 </div>
@@ -771,46 +850,22 @@ export default function App() {
               {activeTab === "settings" && (
                 <SettingsPage
                   settings={appSettings}
-
-                  onSave={async () => {
-                    throw new Error(
-                      "A gravação dos catálogos no " +
-                      "Dataverse ainda não foi " +
-                      "implementada. Nenhuma " +
-                      "alteração foi salva."
-                    );
-                  }}
+                  employees={employees}
+                  shifts={shiftsCatalog}
+                  onImportEmployees={handleImportEmployees}
+                  onSaveShifts={handleSaveShifts}
+                  onSave={handleSaveSettings}
                 />
+              )}
+
+              {activeTab === "futureHires" && (
+                <FutureHiresPage />
               )}
 
             </>
           )}
 
         </main>
-
-        {/* ================================= */}
-        {/* RODAPÉ                           */}
-        {/* ================================= */}
-
-        <footer
-          className="
-            px-6 py-6
-            text-center
-            text-[10px]
-            uppercase
-            font-bold
-            tracking-wider
-            text-slate-400
-            bg-transparent
-            border-t
-            border-sky-100/80
-            leading-relaxed
-            break-words
-          "
-        >
-          RH Dashboard © 2026 •
-          Centro de Treinamento Missionário do Brasil
-        </footer>
 
       </div>
 
@@ -824,6 +879,7 @@ export default function App() {
           setSelectedEmployee(null)
         }
         onEdit={handleDetailsEditShortcut}
+        onConfigureVacation={handleConfigureVacation}
       />
 
       {/* ================================= */}
@@ -839,25 +895,11 @@ export default function App() {
         onSave={handleSaveEmployee}
       />
 
-      {/* ================================= */}
-      {/* BARRA DE AÇÕES                    */}
-      {/* ================================= */}
-
-      <FloatingActionBar
-        systemAlertCount={systemAlertCount}
-        pendingCount={pendingCount}
-        criticalVacationCount={
-          criticalVacationCount
-        }
-
-        onResetData={handleResetData}
-
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-
-        setTeamSubTab={setTeamSubTab}
-        setScheduleSubTab={setScheduleSubTab}
-        setRisksSubTab={setRisksSubTab}
+      <VacationFormPanel
+        employee={vacationEmployee}
+        allEmployees={employees}
+        onClose={() => setVacationEmployee(null)}
+        onSave={handleSaveVacation}
       />
 
     </div>

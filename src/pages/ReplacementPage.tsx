@@ -8,40 +8,50 @@ import {
   RefreshCw,
   TrendingUp,
   AlertTriangle,
-  UserCheck,
   Languages,
-  UserPlus2,
-  CheckCircle2,
-  Compass
 } from "lucide-react";
-import { RhEmployee, LanguageReplacement } from "../types/rh";
+import type { RhEmployee, LanguageReplacement } from "../types/rh";
 import { calcularDiasRestantes } from "../utils/dateUtils";
 
 interface ReplacementPageProps {
   employees: RhEmployee[];
-  onSelectEmployee: (emp: RhEmployee) => void;
+  languages: string[];
 }
 
-export const ReplacementPage: React.FC<ReplacementPageProps> = ({ employees }) => {
+function obterIdiomasUnicos(idiomas: string[]): string[] {
+  const idiomasUnicos = new Map<string, string>();
+  idiomas.forEach((idioma) => {
+    const nome = idioma.trim();
+    if (nome && !idiomasUnicos.has(nome.toLocaleLowerCase("pt-BR"))) {
+      idiomasUnicos.set(nome.toLocaleLowerCase("pt-BR"), nome);
+    }
+  });
+  return Array.from(idiomasUnicos.values()).sort((a, b) =>
+    a.localeCompare(b, "pt-BR")
+  );
+}
+
+export const ReplacementPage: React.FC<ReplacementPageProps> = ({ employees, languages }) => {
   const actives = useMemo(() => employees.filter((e) => e.statusFuncionario === "Ativo"), [employees]);
 
   // 1. CALCULAR MÉTRICAS DE COBERTURA POR IDIOMA DINAMICAMENTE
   const languageData = useMemo(() => {
-    // Pegar todos os idiomas listados no sistema de forma única
-    const langSet = new Set<string>();
-    employees.forEach((e) => {
-      if (e.idiomas) {
-        e.idiomas.forEach((l) => {
-          if (l && l.trim() !== "") langSet.add(l.trim());
-        });
-      }
-    });
+    const idiomasDisponiveis = obterIdiomasUnicos([
+      ...languages,
+      ...actives.flatMap((employee) => employee.idiomas || []),
+    ]);
 
     const dataList: LanguageReplacement[] = [];
 
-    langSet.forEach((lang) => {
+    idiomasDisponiveis.forEach((lang) => {
       // Filtrar professores ativos que ensinam este idioma
-      const teachersOfLang = actives.filter((e) => e.idiomas && e.idiomas.includes(lang));
+      const teachersOfLang = actives.filter((employee) =>
+        employee.idiomas?.some(
+          (idioma) =>
+            idioma.trim().toLocaleLowerCase("pt-BR") ===
+            lang.toLocaleLowerCase("pt-BR")
+        )
+      );
       const totalActiveTeachers = teachersOfLang.length;
 
       let saem30 = 0;
@@ -67,7 +77,7 @@ export const ReplacementPage: React.FC<ReplacementPageProps> = ({ employees }) =
 
       // Definir Situação e Recomendação baseado nas regras de negócio
       let situacao: "Estável" | "Atenção" | "Risco alto" | "Crítico" | "Baixa cobertura" = "Estável";
-      let recomendacao = "Quadro sã. Nenhuma contratação necessária.";
+      let recomendacao = "Cobertura estável com base nos funcionários ativos.";
 
       if (totalActiveTeachers === 0) {
         situacao = "Crítico";
@@ -113,7 +123,7 @@ export const ReplacementPage: React.FC<ReplacementPageProps> = ({ employees }) =
       };
       return (peso[a.situacao] || 99) - (peso[b.situacao] || 99);
     });
-  }, [actives, employees]);
+  }, [actives, languages]);
 
   // Estatísticas Rápidas
   const totalIdiomas = languageData.length;
@@ -123,30 +133,30 @@ export const ReplacementPage: React.FC<ReplacementPageProps> = ({ employees }) =
   return (
     <div className="space-y-6">
       {/* Page Title */}
-      <div className="rounded-[22px] border border-white bg-gradient-to-br from-[#d5deef] to-[#f0f3fa] p-5 shadow-[0_12px_30px_rgba(57,88,134,0.07)]">
+      <div className="rounded-[22px] border border-white bg-gradient-to-br from-slate-100 to-white p-5 shadow-[0_12px_30px_rgba(0,48,87,0.07)]">
         <h2 className="text-lg sm:text-xl font-bold text-oxford flex items-center gap-2.5">
           <RefreshCw className="w-5 h-5 text-yinmn" />
           <span>Planejador de Reposição e Vagas</span>
         </h2>
         <p className="text-xs text-slate-400 font-medium mt-1">
-          Analise a cobertura Funcionário por idioma e planeje contratações ou renovações com antecedência de até 180 dias.
+          Analise a cobertura por idioma e planeje contratações ou renovações com antecedência de até 180 dias, usando os funcionários ativos e o catálogo de idiomas do Dataverse.
         </p>
       </div>
 
       {/* Estatísticas de Cobertura */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 bg-white border border-sky-100 shadow-[0_10px_26px_rgba(57,88,134,0.05)] rounded-[20px] flex items-center justify-between">
+        <div className="p-4 bg-white border border-sky-100 shadow-[0_10px_26px_rgba(0,48,87,0.05)] rounded-[20px] flex items-center justify-between">
           <div>
             <span className="text-[10px] uppercase font-black text-slate-400 block tracking-wider">Total de Idiomas</span>
             <span className="text-2xl font-bold text-oxford block mt-1">{totalIdiomas}</span>
-            <p className="text-[10px] text-slate-400 font-semibold mt-1">Lecionados na instituição</p>
+            <p className="text-[10px] text-slate-400 font-semibold mt-1">Idiomas ativos no catálogo do Dataverse</p>
           </div>
           <div className="p-3 bg-sky-50 text-yinmn rounded-xl">
             <Languages className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="p-4 bg-white border border-sky-100 shadow-[0_10px_26px_rgba(57,88,134,0.05)] rounded-[20px] flex items-center justify-between">
+        <div className="p-4 bg-white border border-sky-100 shadow-[0_10px_26px_rgba(0,48,87,0.05)] rounded-[20px] flex items-center justify-between">
           <div>
             <span className="text-[10px] uppercase font-black text-rose-600 block tracking-wider">Idiomas Sob Risco Crítico</span>
             <span className="text-2xl font-extrabold text-rose-600 block mt-1">{emRiscoCriticoCount}</span>
@@ -157,7 +167,7 @@ export const ReplacementPage: React.FC<ReplacementPageProps> = ({ employees }) =
           </div>
         </div>
 
-        <div className="p-4 bg-white border border-sky-100 shadow-[0_10px_26px_rgba(57,88,134,0.05)] rounded-[20px] flex items-center justify-between">
+        <div className="p-4 bg-white border border-sky-100 shadow-[0_10px_26px_rgba(0,48,87,0.05)] rounded-[20px] flex items-center justify-between">
           <div>
             <span className="text-[10px] uppercase font-black text-amber-600 block tracking-wider">Idiomas em Atenção</span>
             <span className="text-2xl font-extrabold text-amber-600 block mt-1">{emAtencaoCount}</span>
@@ -170,7 +180,7 @@ export const ReplacementPage: React.FC<ReplacementPageProps> = ({ employees }) =
       </div>
 
       {/* Main Datagrid */}
-      <div className="bg-white p-6 rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(57,88,134,0.06)] space-y-4">
+      <div className="bg-white p-6 rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(0,48,87,0.06)] space-y-4">
         <div>
           <h3 className="text-sm font-bold text-oxford">Balanço de Cobertura de Línguas</h3>
           <p className="text-xs text-slate-400 font-medium mt-0.5">Visão consolidada do quadro de instrutores ativos e previsão de saídas por idioma</p>
@@ -192,6 +202,13 @@ export const ReplacementPage: React.FC<ReplacementPageProps> = ({ employees }) =
               </tr>
             </thead>
             <tbody className="divide-y divide-sky-100">
+              {languageData.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="py-8 text-center text-sm font-medium text-slate-400">
+                    Nenhum idioma ativo foi encontrado no Dataverse.
+                  </td>
+                </tr>
+              )}
               {languageData.map((data) => {
                 let statusBadgeStyle = "bg-emerald-50 text-emerald-600 border-emerald-100";
                 if (data.situacao === "Crítico") {
@@ -256,35 +273,6 @@ export const ReplacementPage: React.FC<ReplacementPageProps> = ({ employees }) =
         </div>
       </div>
 
-      {/* Diretrizes / Recommendations Board */}
-      <div className="bg-oxford text-white p-6 rounded-2xl border border-cadet/30 shadow-lg space-y-4">
-        <h4 className="text-sm font-black uppercase tracking-wider text-jordy flex items-center gap-2">
-          <UserPlus2 className="w-4 h-4 text-jordy" />
-          <span>Diretrizes e Recomendações Gerais de Contratação</span>
-        </h4>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs leading-relaxed">
-          <div className="p-4 bg-cadet/30 rounded-xl border border-jordy/20 space-y-2">
-            <h5 className="font-bold text-sky-100 flex items-center gap-1.5 text-xs">
-              <UserCheck className="w-4 h-4 text-jordy" />
-              <span>Mitigação de Riscos Críticos</span>
-            </h5>
-            <p className="text-sky-100/80 text-[11px] font-medium leading-relaxed">
-              Sempre que um idioma atingir a situação de <strong>Crítico</strong> ou <strong>Risco Alto</strong>, o RH deve priorizar a abertura de vagas no edital semanal, ou remanejar instrutores seniores entre turnos para evitar a paralisação de turmas de missionários.
-            </p>
-          </div>
-
-          <div className="p-4 bg-cadet/30 rounded-xl border border-jordy/20 space-y-2">
-            <h5 className="font-bold text-sky-100 flex items-center gap-1.5 text-xs">
-              <CheckCircle2 className="w-4 h-4 text-jordy" />
-              <span>Políticas de Retenção e Banco de Talentos</span>
-            </h5>
-            <p className="text-sky-100/80 text-[11px] font-medium leading-relaxed">
-              Mantenha o banco de talentos de ex-missionários e professores de línguas constantemente aquecido. Propor negociações de prorrogação de contrato de instrutores seniores com pelo menos <strong>60 dias</strong> de antecedência da data final.
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

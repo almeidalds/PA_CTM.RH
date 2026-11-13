@@ -80,7 +80,7 @@ export const EmployeeSummaryCard: React.FC<EmployeeSummaryCardProps> = ({
   }
 
   return (
-    <div className={`relative p-5 rounded-[20px] border ${cardBorder} ${cardBg} shadow-[0_10px_26px_rgba(57,88,134,0.055)] hover:shadow-[0_16px_34px_rgba(57,88,134,0.11)] transition-all duration-300 flex flex-col justify-between min-h-[220px]`}>
+    <div className={`relative p-5 rounded-[20px] border ${cardBorder} ${cardBg} shadow-[0_10px_26px_rgba(0,48,87,0.055)] hover:shadow-[0_16px_34px_rgba(0,48,87,0.11)] transition-all duration-300 flex flex-col justify-between min-h-[220px]`}>
       
       {/* Crucial Info 1: Header (Nome & Cargo) */}
       <div className="space-y-1">
@@ -138,7 +138,7 @@ export const EmployeeSummaryCard: React.FC<EmployeeSummaryCardProps> = ({
           {isPopoverOpen && (
             <div
               ref={popoverRef}
-              className="absolute right-0 bottom-full mb-2 z-30 w-72 bg-white rounded-2xl border border-sky-100 shadow-[0_16px_36px_rgba(57,88,134,0.17)] p-4 text-xs animate-fadeIn"
+              className="absolute right-0 bottom-full mb-2 z-30 w-72 bg-white rounded-2xl border border-sky-100 shadow-[0_16px_36px_rgba(0,48,87,0.17)] p-4 text-xs animate-fadeIn"
             >
               <div className="flex items-center justify-between border-b border-sky-100 pb-2 mb-3">
                 <span className="font-black uppercase tracking-wider text-yinmn text-[9px]">Resumo</span>
@@ -262,7 +262,7 @@ export const SubstitutionSummaryCard: React.FC<SubstitutionSummaryCardProps> = (
   }
 
   return (
-    <div className={`relative p-5 rounded-[20px] border ${cardBorder} ${cardBg} shadow-[0_10px_26px_rgba(57,88,134,0.05)] hover:shadow-[0_16px_34px_rgba(57,88,134,0.10)] transition-all duration-300 flex flex-col justify-between min-h-[220px]`}>
+    <div className={`relative p-5 rounded-[20px] border ${cardBorder} ${cardBg} shadow-[0_10px_26px_rgba(0,48,87,0.05)] hover:shadow-[0_16px_34px_rgba(0,48,87,0.10)] transition-all duration-300 flex flex-col justify-between min-h-[220px]`}>
       
       {/* Crucial Info 1: Header (Ausente & Motivo) */}
       <div className="space-y-1">
@@ -332,7 +332,7 @@ export const SubstitutionSummaryCard: React.FC<SubstitutionSummaryCardProps> = (
           {isPopoverOpen && (
             <div
               ref={popoverRef}
-              className="absolute right-0 bottom-full mb-2 z-30 w-72 bg-white rounded-2xl border border-sky-100 shadow-[0_16px_36px_rgba(57,88,134,0.17)] p-4 text-xs animate-fadeIn"
+              className="absolute right-0 bottom-full mb-2 z-30 w-72 bg-white rounded-2xl border border-sky-100 shadow-[0_16px_36px_rgba(0,48,87,0.17)] p-4 text-xs animate-fadeIn"
             >
               <div className="flex items-center justify-between border-b border-sky-100 pb-2 mb-3">
                 <span className="font-black uppercase tracking-wider text-yinmn text-[9px]">Fatores Técnicos de Cobertura</span>
@@ -457,7 +457,7 @@ export const ContractSummaryCard: React.FC<ContractSummaryCardProps> = ({
   const originalEmployee = employees.find((e) => e.recordId === contract.recordId);
 
   return (
-    <div className={`relative p-5 rounded-[20px] border ${cardBorder} ${cardBg} shadow-[0_10px_26px_rgba(57,88,134,0.05)] hover:shadow-[0_16px_34px_rgba(57,88,134,0.10)] transition-all duration-300 flex flex-col justify-between min-h-[220px]`}>
+    <div className={`relative p-5 rounded-[20px] border ${cardBorder} ${cardBg} shadow-[0_10px_26px_rgba(0,48,87,0.05)] hover:shadow-[0_16px_34px_rgba(0,48,87,0.10)] transition-all duration-300 flex flex-col justify-between min-h-[220px]`}>
       
       {/* Crucial Info 1: Header (Nome & Cargo) */}
       <div className="space-y-1">
@@ -525,7 +525,7 @@ export const ContractSummaryCard: React.FC<ContractSummaryCardProps> = ({
           {isPopoverOpen && (
             <div
               ref={popoverRef}
-              className="absolute right-0 bottom-full mb-2 z-30 w-72 bg-white rounded-2xl border border-sky-100 shadow-[0_16px_36px_rgba(57,88,134,0.17)] p-4 text-xs animate-fadeIn"
+              className="absolute right-0 bottom-full mb-2 z-30 w-72 bg-white rounded-2xl border border-sky-100 shadow-[0_16px_36px_rgba(0,48,87,0.17)] p-4 text-xs animate-fadeIn"
             >
               <div className="flex items-center justify-between border-b border-sky-100 pb-2 mb-3">
                 <span className="font-black uppercase tracking-wider text-yinmn text-[9px]">Ficha Contratual</span>

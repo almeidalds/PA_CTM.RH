@@ -5,6 +5,7 @@
 
 import React from "react";
 import { GroupCount } from "../utils/groupUtils";
+import { churchPalette } from "../theme/churchPalette";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, 
   PieChart, Pie, Legend, CartesianGrid
@@ -35,7 +36,7 @@ interface ChartCardProps {
 }
 
 export const ChartCard: React.FC<ChartCardProps> = ({ title, description, children }) => (
-  <div className="bg-white p-6 rounded-[22px] border border-sky-100 shadow-[0_12px_32px_rgba(57,88,134,0.055)] flex flex-col h-full hover:shadow-[0_18px_38px_rgba(57,88,134,0.11)] hover:-translate-y-0.5 transition-all duration-300">
+  <div className="bg-white p-6 rounded-[22px] border border-sky-100 shadow-[0_12px_32px_rgba(0,48,87,0.055)] flex flex-col h-full hover:shadow-[0_18px_38px_rgba(0,48,87,0.11)] hover:-translate-y-0.5 transition-all duration-300">
     <div className="mb-5">
       <h4 className="text-base font-extrabold text-oxford tracking-tight">{title}</h4>
       <p className="text-[11px] text-slate-400 font-medium mt-1 leading-snug">{description}</p>
@@ -46,7 +47,16 @@ export const ChartCard: React.FC<ChartCardProps> = ({ title, description, childr
   </div>
 );
 
-const COLORS = ["#638ecb", "#8aaee0", "#8aaee0", "#f43f5e", "#f59e0b", "#5aa76c", "#8aaee0", "#395886"];
+const COLORS = [
+  churchPalette.blue[30],
+  churchPalette.blue[20],
+  churchPalette.blue[25],
+  churchPalette.semantic.red,
+  churchPalette.semantic.warning,
+  churchPalette.semantic.success,
+  churchPalette.blue[10],
+  churchPalette.blue[40],
+];
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -78,8 +88,8 @@ export const IdiomaChart: React.FC<IdiomaChartProps> = ({ data }) => {
     <ResponsiveContainer width="100%" height={240}>
       <BarChart data={data} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
         <XAxis type="number" hide />
-        <YAxis dataKey="name" type="category" width={80} axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#395886' }} />
-        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F0F3FA', radius: 4 }} />
+        <YAxis dataKey="name" type="category" width={80} axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: churchPalette.text.secondary }} />
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: churchPalette.surface.subtle, radius: 4 }} />
         <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={20}>
           {data.map((entry, index) => (
             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -107,13 +117,13 @@ export const SaidasMesChart: React.FC<SaidasMesChartProps> = ({ data }) => {
   return (
     <ResponsiveContainer width="100%" height={240}>
       <BarChart data={data} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#D5DEEF" />
-        <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: '#64748B' }} dy={10} />
-        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: '#64748B' }} />
-        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F0F3FA' }} />
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={churchPalette.gray[5]} />
+        <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: churchPalette.gray[35] }} dy={10} />
+        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: churchPalette.gray[35] }} />
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: churchPalette.surface.subtle }} />
         <Bar dataKey="count" radius={[6, 6, 0, 0]} barSize={32}>
            {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={entry.count > 0 ? "#f43f5e" : "#d5deef"} />
+            <Cell key={`cell-${index}`} fill={entry.count > 0 ? churchPalette.semantic.red : churchPalette.gray[5]} />
           ))}
         </Bar>
       </BarChart>
@@ -135,7 +145,14 @@ export const ZonaChart: React.FC<ZonaChartProps> = ({ data }) => {
     );
   }
 
-  const pieColors = ["#638ecb", "#8aaee0", "#5aa76c", "#F59E0B", "#8aaee0", "#64748B"];
+  const pieColors = [
+    churchPalette.blue[30],
+    churchPalette.blue[20],
+    churchPalette.semantic.success,
+    churchPalette.semantic.warning,
+    churchPalette.blue[10],
+    churchPalette.gray[35],
+  ];
 
   return (
     <ResponsiveContainer width="100%" height={260}>
@@ -157,7 +174,7 @@ export const ZonaChart: React.FC<ZonaChartProps> = ({ data }) => {
           ))}
         </Pie>
         <Tooltip content={<CustomTooltip />} />
-        <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#395886', paddingTop: '20px' }} />
+        <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', color: churchPalette.text.primary, paddingTop: '20px' }} />
       </PieChart>
     </ResponsiveContainer>
   );
@@ -177,15 +194,15 @@ export const TurnoChart: React.FC<TurnoChartProps> = ({ data }) => {
     );
   }
 
-  const turnoColors = ["#638ecb", "#8aaee0", "#8aaee0"];
+  const turnoColors = [churchPalette.blue[30], churchPalette.blue[20], churchPalette.blue[25]];
 
   return (
     <ResponsiveContainer width="100%" height={240}>
       <BarChart data={data} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#D5DEEF" />
-        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748B' }} dy={10} />
-        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: '#64748B' }} />
-        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F0F3FA' }} />
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={churchPalette.gray[5]} />
+        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: churchPalette.gray[35] }} dy={10} />
+        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold', fill: churchPalette.gray[35] }} />
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: churchPalette.surface.subtle }} />
         <Bar dataKey="count" radius={[6, 6, 0, 0]} barSize={40}>
           {data.map((entry, index) => (
             <Cell key={`cell-${index}`} fill={turnoColors[index % turnoColors.length]} />
@@ -211,9 +228,9 @@ export const StatusChart: React.FC<StatusChartProps> = ({ data }) => {
   }
 
   const statusColors: Record<string, string> = {
-    Ativo: "#638ecb",
-    "A começar": "#8aaee0",
-    Encerrado: "#f43f5e",
+    Ativo: churchPalette.semantic.success,
+    "A começar": churchPalette.blue[25],
+    Encerrado: churchPalette.semantic.danger,
   };
 
   return (
@@ -236,7 +253,7 @@ export const StatusChart: React.FC<StatusChartProps> = ({ data }) => {
           ))}
         </Pie>
         <Tooltip content={<CustomTooltip />} />
-        <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', color: '#395886', paddingTop: '20px' }} />
+        <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold', color: churchPalette.text.primary, paddingTop: '20px' }} />
       </PieChart>
     </ResponsiveContainer>
   );
@@ -257,20 +274,20 @@ export const RiscoChart: React.FC<RiscoChartProps> = ({ data }) => {
   }
 
   const riscoColors: Record<string, string> = {
-    Crítico: "#ef4444",
-    Alto: "#f59e0b",
-    Médio: "#638ecb",
-    Baixo: "#8aaee0",
-    "Sem risco": "#10b981",
-    "Cadastro incompleto": "#64748b",
+    Crítico: churchPalette.semantic.danger,
+    Alto: churchPalette.semantic.warning,
+    Médio: churchPalette.blue[30],
+    Baixo: churchPalette.blue[20],
+    "Sem risco": churchPalette.semantic.success,
+    "Cadastro incompleto": churchPalette.gray[35],
   };
 
   return (
     <ResponsiveContainer width="100%" height={260}>
       <BarChart data={data} layout="vertical" margin={{ top: 0, right: 30, left: 30, bottom: 0 }}>
         <XAxis type="number" hide />
-        <YAxis dataKey="name" type="category" width={110} axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: '#395886' }} />
-        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F0F3FA', radius: 4 }} />
+        <YAxis dataKey="name" type="category" width={110} axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: churchPalette.text.secondary }} />
+        <Tooltip content={<CustomTooltip />} cursor={{ fill: churchPalette.surface.subtle, radius: 4 }} />
         <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={20}>
           {data.map((entry, index) => (
             <Cell key={`cell-${index}`} fill={riscoColors[entry.name] || COLORS[index % COLORS.length]} />

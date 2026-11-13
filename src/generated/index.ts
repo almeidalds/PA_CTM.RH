@@ -5,8 +5,10 @@
 
 // Models
 export * as CommonModels from './models/CommonModels';
+export * as Ctmbrasi_EfetivarContratacaoFuturaModel from './models/Ctmbrasi_EfetivarContratacaoFuturaModel';
 export * as Ctmbrasi_employeerecordsesModel from './models/Ctmbrasi_employeerecordsesModel';
 export * as Ctmbrasi_rhcontractrenewalsesModel from './models/Ctmbrasi_rhcontractrenewalsesModel';
+export * as Ctmbrasi_rhcontratacoesfuturasesModel from './models/Ctmbrasi_rhcontratacoesfuturasesModel';
 export * as Ctmbrasi_rhemployeelanguagesesModel from './models/Ctmbrasi_rhemployeelanguagesesModel';
 export * as Ctmbrasi_rhlanguagesesModel from './models/Ctmbrasi_rhlanguagesesModel';
 export * as Ctmbrasi_rhpositionsesModel from './models/Ctmbrasi_rhpositionsesModel';
@@ -19,8 +21,10 @@ export * as Office365UsersModel from './models/Office365UsersModel';
 export * as SystemusersModel from './models/SystemusersModel';
 
 // Services
+export * from './services/Ctmbrasi_EfetivarContratacaoFuturaService';
 export * from './services/Ctmbrasi_employeerecordsesService';
 export * from './services/Ctmbrasi_rhcontractrenewalsesService';
+export * from './services/Ctmbrasi_rhcontratacoesfuturasesService';
 export * from './services/Ctmbrasi_rhemployeelanguagesesService';
 export * from './services/Ctmbrasi_rhlanguagesesService';
 export * from './services/Ctmbrasi_rhpositionsesService';

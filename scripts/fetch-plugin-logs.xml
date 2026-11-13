@@ -1,0 +1,18 @@
+<fetch>
+  <entity name="ctmbrasi_rhcontratacoesfuturas">
+    <attribute name="ctmbrasi_rhcontratacoesfuturasid" />
+    <attribute name="ctmbrasi_instrutoranovo" />
+    <attribute name="ctmbrasi_matricula" />
+    <attribute name="ctmbrasi_fase" />
+    <attribute name="ctmbrasi_statusdeconfirmacao" />
+    <attribute name="ctmbrasi_zonas" />
+    <attribute name="ctmbrasi_cargo" />
+    <attribute name="ctmbrasi_datarealdeinicio" />
+    <attribute name="modifiedon" />
+    <order attribute="modifiedon" descending="true" />
+    <filter>
+      <condition attribute="ctmbrasi_fase" operator="eq" value="583150000" />
+      <condition attribute="ctmbrasi_statusdeconfirmacao" operator="eq" value="583150000" />
+    </filter>
+  </entity>
+</fetch>

@@ -46,6 +46,9 @@ import type {
 import type {
   Ctmbrasi_rhshiftses,
 } from "../generated/models/Ctmbrasi_rhshiftsesModel";
+import type {
+  Ctmbrasi_rhshiftsesBase,
+} from "../generated/models/Ctmbrasi_rhshiftsesModel";
 
 import type {
   Ctmbrasi_rhlanguageses,
@@ -74,6 +77,11 @@ export interface CatalogosRH {
   turnos: TurnoItem[];
   idiomas: CatalogoItem[];
 }
+
+export type CatalogSettings = Pick<
+  import("../types/rh").AppSettings,
+  "idiomas" | "cargos" | "zonas"
+>;
 
 // ==========================================
 // PAGINAÇÃO DATAVERSE
@@ -243,6 +251,87 @@ export async function listarTurnosDataverse():
   }));
 }
 
+export async function salvarTurnosDataverse(
+  turnos: TurnoItem[],
+): Promise<TurnoItem[]> {
+  const nomes = new Set<string>();
+  const codigos = new Set<string>();
+
+  for (const turno of turnos) {
+    const nome = turno.nome.trim();
+    const codigo = turno.codigo.trim();
+    if (!nome || !codigo) {
+      throw new Error("Informe o nome e o código de todos os turnos.");
+    }
+
+    const nomeNormalizado = nome.toLocaleLowerCase("pt-BR");
+    const codigoNormalizado = codigo.toLocaleLowerCase("pt-BR");
+    if (nomes.has(nomeNormalizado) || codigos.has(codigoNormalizado)) {
+      throw new Error("Os nomes e códigos dos turnos devem ser únicos.");
+    }
+    nomes.add(nomeNormalizado);
+    codigos.add(codigoNormalizado);
+  }
+
+  const turnosAtuais = await listarTurnosDataverse();
+  const atuaisPorId = new Map(turnosAtuais.map((turno) => [turno.id, turno]));
+
+  for (const turno of turnos) {
+    const campos: Partial<Ctmbrasi_rhshiftsesBase> = {};
+    const atual = turno.id ? atuaisPorId.get(turno.id) : undefined;
+    const codigo = turno.codigo.trim();
+    const nome = turno.nome.trim();
+    const horarioInicio = turno.horarioInicio.trim();
+    const horarioFim = turno.horarioFim.trim();
+
+    if (!turno.id || atual?.codigo !== codigo) {
+      campos.ctmbrasi_shiftcode = codigo;
+    }
+    if (!turno.id || atual?.nome !== nome) {
+      campos.ctmbrasi_shiftname = nome;
+    }
+    if (!turno.id || atual?.horarioInicio !== horarioInicio) {
+      campos.ctmbrasi_starttime = horarioInicio;
+    }
+    if (!turno.id || atual?.horarioFim !== horarioFim) {
+      campos.ctmbrasi_endtime = horarioFim;
+    }
+    if (!turno.id || atual?.turnoTemplo !== turno.turnoTemplo) {
+      campos.ctmbrasi_templeshift = turno.turnoTemplo;
+    }
+    if (!turno.id || atual?.ativo !== turno.ativo) {
+      campos.ctmbrasi_active = turno.ativo;
+      campos.statecode = turno.ativo ? 0 : 1;
+      campos.statuscode = turno.ativo ? 1 : 2;
+    }
+
+    if (turno.id && Object.keys(campos).length === 0) continue;
+
+    const result = turno.id
+      ? await Ctmbrasi_rhshiftsesService.update(turno.id, campos)
+      : await Ctmbrasi_rhshiftsesService.create({
+          ctmbrasi_shiftcode: codigo,
+          ctmbrasi_shiftname: nome,
+          ctmbrasi_starttime: horarioInicio,
+          ctmbrasi_endtime: horarioFim,
+          ctmbrasi_templeshift: turno.turnoTemplo,
+          ctmbrasi_active: turno.ativo,
+          statecode: turno.ativo ? 0 : 1,
+          statuscode: turno.ativo ? 1 : 2,
+        });
+
+    if (!result.success) {
+      throw new Error(
+        `Não foi possível salvar o turno "${turno.nome}": ${
+          result.error?.message || "erro retornado pelo Dataverse."
+        }`,
+      );
+    }
+  }
+
+  return listarTurnosDataverse();
+}
+
 // ==========================================
 // IDIOMAS
 // ==========================================
@@ -299,4 +388,186 @@ export async function carregarCatalogosDataverse():
     turnos,
     idiomas,
   };
+}
+
+interface CatalogMutationResult {
+  success: boolean;
+  error?: { message?: string };
+}
+
+const normalizarCatalogo = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLocaleLowerCase("pt-BR");
+
+function gerarCodigoCatalogo(nome: string, usados: Set<string>) {
+  const slug = nome
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleUpperCase("pt-BR")
+    .replace(/[^A-Z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40) || "ITEM";
+  const base = `AUTO-${slug}`;
+  let codigo = base;
+  let sufixo = 2;
+  while (usados.has(normalizarCatalogo(codigo))) {
+    codigo = `${base.slice(0, 48 - String(sufixo).length)}-${sufixo}`;
+    sufixo += 1;
+  }
+  usados.add(normalizarCatalogo(codigo));
+  return codigo;
+}
+
+async function sincronizarCatalogo(
+  tabela: string,
+  atual: CatalogoItem[],
+  desejados: string[],
+  criar: (nome: string, codigo: string) => Promise<CatalogMutationResult>,
+  atualizar: (
+    item: CatalogoItem,
+    ativo: boolean,
+  ) => Promise<CatalogMutationResult>,
+): Promise<void> {
+  const nomes = new Set<string>();
+  for (const rawName of desejados) {
+    const nome = rawName.trim();
+    const normalizado = normalizarCatalogo(nome);
+    if (!normalizado) {
+      throw new Error(`Há um item sem nome na lista de ${tabela}.`);
+    }
+    if (nomes.has(normalizado)) {
+      throw new Error(`Há nomes repetidos na lista de ${tabela}: "${nome}".`);
+    }
+    nomes.add(normalizado);
+  }
+
+  const porNome = new Map<string, CatalogoItem>();
+  for (const item of atual) {
+    const normalizado = normalizarCatalogo(item.nome);
+    if (normalizado && !porNome.has(normalizado)) {
+      porNome.set(normalizado, item);
+    }
+  }
+  const mantidos = new Set<string>();
+  const codigosUsados = new Set(
+    atual.map((item) => normalizarCatalogo(item.codigo)).filter(Boolean),
+  );
+
+  const executar = async (
+    nome: string,
+    operacao: Promise<CatalogMutationResult>,
+  ) => {
+    const resultado = await operacao;
+    if (!resultado.success) {
+      throw new Error(
+        `Não foi possível salvar ${tabela} "${nome}": ${
+          resultado.error?.message || "erro retornado pelo Dataverse."
+        }`,
+      );
+    }
+  };
+
+  for (const rawName of desejados) {
+    const nome = rawName.trim();
+    const existente = porNome.get(normalizarCatalogo(nome));
+    if (existente) {
+      mantidos.add(existente.id);
+      if (!existente.ativo) {
+        await executar(nome, atualizar(existente, true));
+      }
+    } else {
+      const codigo = gerarCodigoCatalogo(nome, codigosUsados);
+      await executar(nome, criar(nome, codigo));
+    }
+  }
+
+  for (const item of atual) {
+    if (item.ativo && !mantidos.has(item.id)) {
+      await executar(item.nome, atualizar(item, false));
+    }
+  }
+}
+
+export async function salvarCatalogosDataverse(
+  settings: CatalogSettings,
+): Promise<CatalogosRH> {
+  const [idiomas, cargos, zonas] = await Promise.all([
+    listarIdiomasDataverse(),
+    listarCargosDataverse(),
+    listarZonasDataverse(),
+  ]);
+
+  try {
+    await sincronizarCatalogo(
+      "idiomas",
+      idiomas,
+      settings.idiomas,
+      (nome, codigo) =>
+        Ctmbrasi_rhlanguagesesService.create({
+          ctmbrasi_languagecode: codigo,
+          ctmbrasi_languagename: nome,
+          ctmbrasi_active: true,
+          statecode: 0,
+          statuscode: 1,
+        }),
+      (item, ativo) =>
+        Ctmbrasi_rhlanguagesesService.update(item.id, {
+          ctmbrasi_active: ativo,
+          statecode: ativo ? 0 : 1,
+          statuscode: ativo ? 1 : 2,
+        }),
+    );
+
+    await sincronizarCatalogo(
+      "cargos",
+      cargos,
+      settings.cargos,
+      (nome, codigo) =>
+        Ctmbrasi_rhpositionsesService.create({
+          ctmbrasi_positioncode: codigo,
+          ctmbrasi_positionname: nome,
+          ctmbrasi_active: true,
+          statecode: 0,
+          statuscode: 1,
+        }),
+      (item, ativo) =>
+        Ctmbrasi_rhpositionsesService.update(item.id, {
+          ctmbrasi_active: ativo,
+          statecode: ativo ? 0 : 1,
+          statuscode: ativo ? 1 : 2,
+        }),
+    );
+
+    await sincronizarCatalogo(
+      "zonas",
+      zonas,
+      settings.zonas,
+      (nome, codigo) =>
+        Ctmbrasi_rhzonesesService.create({
+          ctmbrasi_zonecode: codigo,
+          ctmbrasi_zonename: nome,
+          ctmbrasi_active: true,
+          statecode: 0,
+          statuscode: 1,
+        }),
+      (item, ativo) =>
+        Ctmbrasi_rhzonesesService.update(item.id, {
+          ctmbrasi_active: ativo,
+          statecode: ativo ? 0 : 1,
+          statuscode: ativo ? 1 : 2,
+        }),
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Erro inesperado.";
+    throw new Error(
+      `${message} Algumas alterações anteriores podem já ter sido gravadas; ` +
+      "tente salvar novamente para sincronizar as listas.",
+    );
+  }
+
+  return carregarCatalogosDataverse();
 }

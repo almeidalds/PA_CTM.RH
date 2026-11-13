@@ -315,7 +315,7 @@ export const SubstitutionsPage: React.FC<SubstitutionsPageProps> = ({
   return (
     <div className="space-y-6">
       {/* Page Title & Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-[22px] border border-white bg-gradient-to-br from-[#d5deef] to-[#f0f3fa] p-5 shadow-[0_12px_30px_rgba(57,88,134,0.07)] gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-[22px] border border-white bg-gradient-to-br from-slate-100 to-white p-5 shadow-[0_12px_30px_rgba(0,48,87,0.07)] gap-4">
         <div>
           <h2 className="text-lg sm:text-xl font-bold text-oxford flex items-center gap-2.5">
             <RefreshCw className="w-5 h-5 text-yinmn" />
@@ -338,7 +338,7 @@ export const SubstitutionsPage: React.FC<SubstitutionsPageProps> = ({
       </div>
 
       {/* Grid de Cards KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="adaptive-grid gap-3">
         <div className="p-3.5 bg-amber-50 rounded-2xl border border-amber-100">
           <span className="text-[9px] uppercase font-black text-amber-600 tracking-wider block">Pendentes</span>
           <span className="text-lg font-extrabold text-amber-900 block mt-0.5">{totalPendentes}</span>
@@ -376,7 +376,7 @@ export const SubstitutionsPage: React.FC<SubstitutionsPageProps> = ({
       </div>
 
       {/* Filtros e Busca */}
-      <div className="bg-white p-4 rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(57,88,134,0.06)] flex flex-col md:flex-row gap-3">
+      <div className="bg-white p-4 rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(0,48,87,0.06)] flex flex-col md:flex-row gap-3">
         <div className="flex-1 relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
@@ -423,7 +423,7 @@ export const SubstitutionsPage: React.FC<SubstitutionsPageProps> = ({
 
       {/* Cards de Substituições - Responsive Card Grid */}
       {filteredSubs.length === 0 ? (
-        <div className="bg-white rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(57,88,134,0.06)] p-12 text-center">
+        <div className="bg-white rounded-[22px] border border-sky-100 shadow-[0_12px_30px_rgba(0,48,87,0.06)] p-12 text-center">
           <AlertTriangle className="w-10 h-10 text-slate-300 mx-auto mb-3 animate-bounce" />
           <h3 className="text-base font-bold text-oxford mb-1">Nenhum afastamento ou substituição</h3>
           <p className="text-xs text-slate-400 max-w-sm mx-auto">
@@ -465,7 +465,7 @@ export const SubstitutionsPage: React.FC<SubstitutionsPageProps> = ({
       {/* FLYOUT MODAL 1 - FORMULÁRIO DE AFASTAMENTO */}
       {isFormOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-[26px] border border-sky-100 max-w-lg w-full p-6 shadow-[0_24px_70px_rgba(57,88,134,0.24)] relative">
+          <div className="bg-white rounded-[26px] border border-sky-100 max-w-lg w-full p-6 shadow-[0_24px_70px_rgba(0,48,87,0.24)] relative">
             <h3 className="text-sm font-black uppercase tracking-wider text-oxford mb-4">
               Registrar Ausência / Afastamento Temporário
             </h3>
@@ -635,7 +635,7 @@ export const SubstitutionsPage: React.FC<SubstitutionsPageProps> = ({
       {/* FLYOUT MODAL 2 - RECOMENDADOR DE SUBSTITUTOS INTELIGENTES */}
       {isRecommenderOpen && activeSubForRecommendation && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-[26px] border border-sky-100 max-w-2xl w-full p-6 shadow-[0_24px_70px_rgba(57,88,134,0.24)] relative flex flex-col max-h-[90vh]">
+          <div className="bg-white rounded-[26px] border border-sky-100 max-w-2xl w-full p-6 shadow-[0_24px_70px_rgba(0,48,87,0.24)] relative flex flex-col max-h-[90vh]">
             {/* Modal Header */}
             <div className="border-b border-sky-100 pb-3 mb-4">
               <span className="text-[10px] uppercase font-black text-yinmn tracking-wider">

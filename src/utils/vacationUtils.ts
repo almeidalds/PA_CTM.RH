@@ -157,7 +157,7 @@ export function identificarAlertaFerias(funcionario: RhEmployee) {
     return {
       level: "Concluído",
       color: "bg-emerald-50 text-emerald-700 border-emerald-200",
-      dotColor: "bg-[#00995D]",
+      dotColor: "bg-emerald-600",
       label: "Concluído"
     };
   }

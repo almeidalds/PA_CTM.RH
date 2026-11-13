@@ -125,7 +125,7 @@ export const ExecutiveSummaryPage: React.FC<Props> = ({ employees }) => {
         </div>
 
         {/* KPIs Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="adaptive-grid gap-4">
           <div className="bg-white p-5 rounded-2xl border border-sky-100 shadow-sm flex flex-col justify-between">
             <div className="flex items-center justify-between mb-4">
               <span className="text-xs font-bold text-slate-500 uppercase">Qualidade dos Dados</span>

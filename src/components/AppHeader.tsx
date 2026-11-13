@@ -219,7 +219,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
   return (
     <header
-      className="sticky top-0 z-20 flex min-h-[58px] items-center justify-between gap-3 border-b border-white/80 bg-[#f0f3fa]/90 px-3 py-2 shadow-[0_6px_22px_rgba(57,88,134,0.05)] backdrop-blur-xl sm:px-4 lg:px-5"
+      className="sticky top-0 z-20 flex min-h-[58px] items-center justify-between gap-3 border-b border-white/80 bg-slate-50/90 px-3 py-2 shadow-[0_6px_22px_rgba(0,48,87,0.05)] backdrop-blur-xl sm:px-4 lg:px-5"
     >
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <button
@@ -302,7 +302,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               <img
                 src={fotoUsuario!}
                 alt={`Foto de perfil de ${usuario.nome}`}
-                className="h-9 w-9 rounded-full border-2 border-white object-cover shadow-[0_0_0_1px_#b1c9ef]"
+                className="h-9 w-9 rounded-full border-2 border-white object-cover ring-1 ring-sky-200"
                 referrerPolicy="no-referrer"
                 onError={() => setErroFoto(true)}
               />
@@ -310,7 +310,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               <div
                 role="img"
                 aria-label={`Avatar de ${usuario.nome}`}
-                className="flex h-9 w-9 select-none items-center justify-center rounded-full border-2 border-white bg-sky-100 text-xs font-bold text-sky-700 shadow-[0_0_0_1px_#b1c9ef]"
+                className="flex h-9 w-9 select-none items-center justify-center rounded-full border-2 border-white bg-sky-100 text-xs font-bold text-sky-700 ring-1 ring-sky-200"
               >
                 {carregandoUsuario ? (
                   <div

@@ -4,13 +4,12 @@ import { getToday, getMonthOffset } from "../utils/dateUtils";
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { RhEmployee, Substitution, ContractRenewal, SystemAlert, TimelineEvent, SubstitutionReason, SubstitutionStatus, ContractRenewalStatus, SystemAlertStatus } from "../types/rh";
+import { RhEmployee, Substitution, ContractRenewal, SystemAlert, SubstitutionReason, SubstitutionStatus, ContractRenewalStatus, SystemAlertStatus } from "../types/rh";
 import { formatarDataBR, formatarDataCurta, calcularDiasRestantes } from "../utils/dateUtils";
 import { calcularStatusFerias, calcularDiasVendidos, calcularDiasTirados } from "../utils/vacationUtils";
 import { normalizarTurno } from "../constants/turnos";
 
 const SUBSTITUTIONS_KEY = "ctm_rh_substitutions";
-const TIMELINE_EVENTS_KEY = "ctm_rh_timeline_events";
 const ALERT_OVERRIDES_KEY = "ctm_rh_alert_overrides";
 
 /**
@@ -108,81 +107,6 @@ export function salvarSubstituicoes(substituicoes: Substitution[]): void {
   } catch (err) {
     console.error("Erro ao salvar substituições:", err);
   }
-}
-
-/**
- * Inicializa a timeline padrão de eventos fictícios para os funcionários
- */
-function obterTimelineIniciais(): Record<string, TimelineEvent[]> {
-  return {
-    "rec-01": [
-      { recordId: "evt-01-1", data: "2024-01-15", tipo: "Admissão", descricao: "Admissão do instrutor no CTM Brasil.", responsavel: "Robson (Gerente de RH)", categoria: "Cadastro" },
-      { recordId: "evt-01-2", data: "2025-01-15", tipo: "Direito Adquirido", descricao: "Aquisição do primeiro período aquisitivo de férias.", responsavel: "Sistema de RH", categoria: "Férias" },
-      { recordId: "evt-01-3", data: "2026-01-15", tipo: "Direito Adquirido Crítico", descricao: "Aquisição do segundo período de férias acumulado sem gozo.", responsavel: "Sistema de RH", categoria: "Risco" }
-    ],
-    "rec-02": [
-      { recordId: "evt-02-1", data: "2024-03-10", tipo: "Admissão", descricao: "Contrato firmado com Yuki Tanaka para as turmas de Japonês.", responsavel: "Robson (Gerente de RH)", categoria: "Cadastro" },
-      { recordId: "evt-02-2", data: "2025-05-01", tipo: "Férias Concluídas", descricao: "Férias gozadas de 30 dias com sucesso.", responsavel: "Coordenação de Ensino", categoria: "Férias" }
-    ],
-    "rec-03": [
-      { recordId: "evt-03-1", data: "2025-01-10", tipo: "Admissão", descricao: "Admissão para lecionar Português para Estrangeiros.", responsavel: "Letícia (Analista de RH)", categoria: "Cadastro" },
-      { recordId: "evt-03-2", data: "2026-07-01", tipo: "Férias Iniciadas", descricao: "Início do período de férias de 30 dias programado.", responsavel: "Sistema de Presença", categoria: "Férias" }
-    ],
-    "rec-04": [
-      { recordId: "evt-04-1", data: "2024-08-01", tipo: "Admissão", descricao: "Início do contrato de Sarah Jane Williams para turmas da tarde.", responsavel: "Robson (RH)", categoria: "Cadastro" }
-    ]
-  };
-}
-
-/**
- * Obtém todos os eventos de timeline adicionados
- */
-export function obterTimelineEvents(employeeId: string): TimelineEvent[] {
-  let allEvents: Record<string, TimelineEvent[]> = {};
-  try {
-    const stored = localStorage.getItem(TIMELINE_EVENTS_KEY);
-    if (stored) {
-      allEvents = JSON.parse(stored);
-    } else {
-      allEvents = obterTimelineIniciais();
-      localStorage.setItem(TIMELINE_EVENTS_KEY, JSON.stringify(allEvents));
-    }
-  } catch (err) {
-    console.error("Erro ao obter timeline:", err);
-    allEvents = obterTimelineIniciais();
-  }
-
-  const list = allEvents[employeeId] || [];
-  
-  // Vamos também injetar dinamicamente eventos baseados no cadastro do funcionário
-  // para que a timeline pareça sempre rica e correta!
-  return list.sort((a, b) => b.data.localeCompare(a.data));
-}
-
-/**
- * Adiciona um evento de timeline para um funcionário
- */
-export function adicionarTimelineEvent(employeeId: string, event: Omit<TimelineEvent, "recordId">): TimelineEvent[] {
-  let allEvents: Record<string, TimelineEvent[]> = {};
-  try {
-    const stored = localStorage.getItem(TIMELINE_EVENTS_KEY);
-    if (stored) allEvents = JSON.parse(stored);
-  } catch (err) {
-    console.error(err);
-  }
-
-  if (!allEvents[employeeId]) {
-    allEvents[employeeId] = obterTimelineIniciais()[employeeId] || [];
-  }
-
-  const novo: TimelineEvent = {
-    ...event,
-    recordId: `evt-${Date.now()}`
-  };
-
-  allEvents[employeeId].push(novo);
-  localStorage.setItem(TIMELINE_EVENTS_KEY, JSON.stringify(allEvents));
-  return allEvents[employeeId].sort((a, b) => b.data.localeCompare(a.data));
 }
 
 /**

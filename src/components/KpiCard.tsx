@@ -36,7 +36,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({
       <div
         id={id}
         onClick={onClick}
-        className={`group relative min-h-[148px] overflow-hidden rounded-[18px] bg-gradient-to-br from-[#638ecb] via-[#638ecb] to-[#395886] p-4 text-white shadow-[0_12px_28px_rgba(57,88,134,0.20)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_36px_rgba(57,88,134,0.26)] ${
+        className={`group relative min-h-[128px] overflow-hidden rounded-[18px] bg-gradient-to-br from-yinmn via-yinmn to-sky-900 p-3 text-white shadow-[0_12px_28px_rgba(0,48,87,0.20)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_36px_rgba(0,48,87,0.26)] sm:min-h-[148px] sm:p-4 ${
           onClick ? "cursor-pointer active:scale-[0.98]" : "cursor-default"
         }`}
       >
@@ -48,7 +48,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({
         </div>
 
         <div className="relative flex items-start justify-between gap-3">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">
+          <span className="min-w-0 break-words text-[10px] font-semibold uppercase tracking-[0.1em] text-white/80 sm:text-[11px] sm:tracking-[0.14em]">
             {title}
           </span>
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 transition-colors group-hover:bg-white/25">
@@ -57,7 +57,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({
         </div>
 
         <div className="relative mt-3.5 flex items-baseline gap-1">
-          <span className="text-3xl font-bold tracking-[-0.04em]">
+          <span className="text-2xl font-bold tracking-[-0.04em] sm:text-3xl">
             {value}
           </span>
         </div>
@@ -71,11 +71,11 @@ export const KpiCard: React.FC<KpiCardProps> = ({
   }
 
   const cardColorClasses: Record<KpiColorType, string> = {
-    green: "bg-[#eef8f4] border-[#dceee8]",
-    blue: "bg-[#d5deef] border-[#b1c9ef]",
-    orange: "bg-[#fff7ea] border-[#f3e7cf]",
-    red: "bg-[#fff0f3] border-[#f4dce3]",
-    gray: "bg-[#f0f3fa] border-[#d5deef]"
+    green: "bg-emerald-50 border-emerald-100",
+    blue: "bg-sky-100 border-sky-200",
+    orange: "bg-amber-50 border-amber-100",
+    red: "bg-rose-50 border-rose-100",
+    gray: "bg-slate-50 border-slate-200"
   };
 
   const iconColorClasses: Record<KpiColorType, string> = {
@@ -93,21 +93,21 @@ export const KpiCard: React.FC<KpiCardProps> = ({
     <div
       id={id}
       onClick={onClick}
-      className={`group relative min-h-[148px] overflow-hidden rounded-[18px] border p-4 shadow-[0_8px_22px_rgba(57,88,134,0.05)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_13px_28px_rgba(57,88,134,0.11)] ${selectedCardClass} ${
+      className={`group relative min-h-[128px] overflow-hidden rounded-[18px] border p-3 shadow-[0_8px_22px_rgba(0,48,87,0.05)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_13px_28px_rgba(0,48,87,0.11)] sm:min-h-[148px] sm:p-4 ${selectedCardClass} ${
         onClick ? "cursor-pointer active:scale-[0.98]" : "cursor-default"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
-        <span className="max-w-[75%] text-[11px] font-semibold uppercase leading-relaxed tracking-[0.12em] text-slate-500">
+        <span className="min-w-0 max-w-[75%] break-words text-[10px] font-semibold uppercase leading-relaxed tracking-[0.08em] text-slate-500 sm:text-[11px] sm:tracking-[0.12em]">
           {title}
         </span>
         <div className={`flex h-8 w-8 items-center justify-center rounded-lg transition-transform group-hover:scale-105 ${selectedIconClass}`}>
-          <Icon className="h-4 w-4" />
+          <Icon className="h-4 w-4 shrink-0" />
         </div>
       </div>
 
       <div className="mt-3.5 flex items-center justify-between gap-2">
-        <span className="text-3xl font-bold tracking-[-0.04em] text-oxford">
+        <span         className="text-2xl font-bold tracking-[-0.04em] text-oxford sm:text-3xl">
           {value}
         </span>
         <ArrowUpRight className="h-4 w-4 text-slate-400 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-yinmn" />
@@ -120,4 +120,3 @@ export const KpiCard: React.FC<KpiCardProps> = ({
     </div>
   );
 };
-

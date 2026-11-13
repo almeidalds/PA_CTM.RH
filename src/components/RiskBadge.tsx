@@ -15,10 +15,10 @@ export const RiskBadge: React.FC<RiskBadgeProps> = ({ level }) => {
   
   switch (level) {
     case "Crítico":
-      badgeStyles = "bg-red-50 text-[#DC2626] border-red-200 font-bold animate-pulse";
+      badgeStyles = "bg-red-50 text-red-500 border-red-200 font-bold animate-pulse";
       break;
     case "Alto":
-      badgeStyles = "bg-amber-50 text-[#F59E0B] border-amber-200 font-semibold";
+      badgeStyles = "bg-amber-50 text-amber-700 border-amber-200 font-semibold";
       break;
     case "Médio":
       badgeStyles = "bg-sky-50 text-yinmn border-sky-200 font-medium";
@@ -27,7 +27,7 @@ export const RiskBadge: React.FC<RiskBadgeProps> = ({ level }) => {
       badgeStyles = "bg-sky-50 text-sky-700 border-sky-200";
       break;
     case "Sem risco":
-      badgeStyles = "bg-emerald-50 text-[#00995D] border-emerald-200";
+      badgeStyles = "bg-emerald-50 text-emerald-600 border-emerald-200";
       break;
     case "Cadastro incompleto":
       badgeStyles = "bg-gray-50 text-gray-500 border-gray-300 border-dashed";

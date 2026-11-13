@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from "react";
+import { getContext } from "@microsoft/power-apps/app";
 import {
   X,
   Mail,
@@ -29,20 +30,30 @@ import {
 import { RhEmployee, TimelineEvent, TimelineEventCategory } from "../types/rh";
 import { formatarDataBR, calcularDiasRestantes } from "../utils/dateUtils";
 import { calcularRisco, identificarPendencias } from "../utils/riskUtils";
+import { calcularStatusFerias } from "../utils/vacationUtils";
 import { StatusBadge } from "./StatusBadge";
 import { RiskBadge } from "./RiskBadge";
-import { obterTimelineEvents, adicionarTimelineEvent } from "../services/additionalDataSource";
+import {
+  adicionarObservacaoHistorico,
+  obterHistoricoFuncionario,
+} from "../services/employeeTimeline";
+import {
+  Ctmbrasi_employeerecordsesctmbrasi_employeestatus as employeeStatuses,
+  Ctmbrasi_employeerecordsesctmbrasi_gender as genders,
+} from "../generated/models/Ctmbrasi_employeerecordsesModel";
 
 interface EmployeeDetailsPanelProps {
   employee: RhEmployee | null;
   onClose: () => void;
   onEdit: (employee: RhEmployee) => void;
+  onConfigureVacation: (employee: RhEmployee) => void;
 }
 
 export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
   employee,
   onClose,
-  onEdit
+  onEdit,
+  onConfigureVacation,
 }) => {
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [copiedSummary, setCopiedSummary] = useState(false);
@@ -52,83 +63,100 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [newObs, setNewObs] = useState("");
   const [newCategory, setNewCategory] = useState<TimelineEventCategory>("Alteração administrativa");
+  const [responsavelAtual, setResponsavelAtual] = useState<string | null>(null);
+  const [erroIdentificacaoUsuario, setErroIdentificacaoUsuario] = useState(false);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [timelineSaving, setTimelineSaving] = useState(false);
+  const [timelineError, setTimelineError] = useState("");
 
   useEffect(() => {
-    if (employee) {
-      const stored = obterTimelineEvents(employee.recordId);
-      
-      // Se não houver eventos cadastrados para esse funcionário, criamos eventos dinâmicos baseados no cadastro dele
-      if (stored.length === 0) {
-        const autoEvents: TimelineEvent[] = [];
-        
-        if (employee.dataAdmissao) {
-          autoEvents.push({
-            recordId: `auto-adm-${employee.recordId}`,
-            data: employee.dataAdmissao,
-            tipo: "Data de admissão",
-            descricao: `Admissão contratual registrada no cargo de ${employee.cargo || "Instrutor"}.`,
-            responsavel: "Robson (Gerente de RH)",
-            categoria: "Cadastro",
-            status: "Concluído"
-          });
-        }
-        
-        if (employee.dataTerminoReal) {
-          autoEvents.push({
-            recordId: `auto-term-${employee.recordId}`,
-            data: employee.dataTerminoReal,
-            tipo: "Data de término de contrato",
-            descricao: "Previsão de encerramento da vigência do contrato atual.",
-            responsavel: "Sistema de Alertas",
-            categoria: "Contrato",
-            status: "Planejado"
-          });
+    let componenteAtivo = true;
+
+    const carregarResponsavel = async () => {
+      try {
+        const contexto = await getContext();
+        const nome = contexto.user.fullName?.trim()
+          || contexto.user.userPrincipalName?.trim();
+
+        if (!nome) {
+          throw new Error("O contexto do Power Apps não informou o usuário autenticado.");
         }
 
-        if (employee.periodosFerias && employee.periodosFerias.length > 0) {
-          employee.periodosFerias.forEach((f, idx) => {
-            autoEvents.push({
-              recordId: `auto-fer-${idx}-${employee.recordId}`,
-              data: f.dataInicio,
-              tipo: "Férias marcadas",
-              descricao: `Período programado de gozo de férias por ${f.dias} dias (término em ${formatarDataBR(f.dataFim)}).`,
-              responsavel: "Letícia (Analista)",
-              categoria: "Férias",
-              status: "Confirmado"
-            });
-          });
-        }
-        
-        setEvents(autoEvents.sort((a, b) => b.data.localeCompare(a.data)));
-      } else {
-        setEvents(stored);
+        if (componenteAtivo) setResponsavelAtual(nome);
+      } catch (erro) {
+        console.error("Não foi possível identificar o responsável pelo histórico:", erro);
+        if (componenteAtivo) setErroIdentificacaoUsuario(true);
       }
+    };
+
+    void carregarResponsavel();
+
+    return () => {
+      componenteAtivo = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!employee) {
+      setEvents([]);
+      return;
     }
+
+    let componenteAtivo = true;
+    setTimelineLoading(true);
+    setTimelineError("");
+
+    void obterHistoricoFuncionario(employee.recordId)
+      .then((historico) => {
+        if (componenteAtivo) setEvents(historico);
+      })
+      .catch((erro: unknown) => {
+        console.error("Não foi possível carregar o histórico do funcionário:", erro);
+        if (componenteAtivo) {
+          setTimelineError(
+            erro instanceof Error ? erro.message : "Não foi possível carregar o histórico."
+          );
+        }
+      })
+      .finally(() => {
+        if (componenteAtivo) setTimelineLoading(false);
+      });
+
+    return () => {
+      componenteAtivo = false;
+    };
   }, [employee]);
 
-  const handleAddObservation = (e: React.FormEvent) => {
+  const handleAddObservation = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!employee || !newObs.trim()) return;
+    if (!employee || !newObs.trim() || !responsavelAtual) return;
 
-    const dataHoje = new Date().toISOString().split("T")[0];
-    const updatedEvents = adicionarTimelineEvent(employee.recordId, {
-      data: dataHoje,
-      tipo: "Observação adicionada",
-      descricao: newObs.trim(),
-      responsavel: "Coordenação de RH",
-      categoria: newCategory,
-      status: "Adicionado",
-      observacoes: ""
-    });
-
-    setEvents(updatedEvents);
-    setNewObs("");
+    setTimelineSaving(true);
+    setTimelineError("");
+    let observacaoGravada = false;
+    try {
+      await adicionarObservacaoHistorico(employee.recordId, newObs, newCategory);
+      observacaoGravada = true;
+      setNewObs("");
+      setEvents(await obterHistoricoFuncionario(employee.recordId));
+    } catch (erro) {
+      console.error("Não foi possível adicionar a observação ao histórico:", erro);
+      const detalhe = erro instanceof Error ? erro.message : String(erro);
+      setTimelineError(observacaoGravada
+        ? `A observação foi gravada, mas não foi possível atualizar o histórico: ${detalhe}`
+        : detalhe);
+    } finally {
+      setTimelineSaving(false);
+    }
   };
 
   if (!employee) return null;
 
 
   const risk = calcularRisco(employee);
+  const vacationStatus = calcularStatusFerias(employee);
+  const vacationPeriods = [...(employee.periodosFerias || [])]
+    .sort((left, right) => left.dataInicio.localeCompare(right.dataInicio));
   const pendencias = identificarPendencias(employee);
   const dias = calcularDiasRestantes(employee.dataTerminoReal);
   const initials = employee.nome
@@ -153,6 +181,47 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
       : risk === "Alto"
         ? "border-amber-200 bg-amber-50/70 text-amber-700"
         : "border-sky-200 bg-sky-50 text-cadet";
+
+  const additionalDetails = [
+    { label: "Global ID", value: employee.globalId },
+    {
+      label: "Gender",
+      value: employee.genero !== undefined
+        ? genders[employee.genero] === "Male"
+          ? "Masculino"
+          : "Feminino"
+        : "",
+    },
+    { label: "Employee Initials", value: employee.iniciaisFuncionario },
+    {
+      label: "Employee Status",
+      value: employee.statusDataverse !== undefined
+        ? ({
+            583150000: "Ativo",
+            583150001: "Férias",
+            583150002: "Licença",
+            583150003: "Inativo",
+            583150004: "Encerrado",
+          }[employee.statusDataverse] || employeeStatuses[employee.statusDataverse])
+        : "",
+    },
+    {
+      label: "Temple",
+      value: employee.templo === undefined
+        ? ""
+        : employee.templo
+          ? "Sim"
+          : "Não",
+    },
+    {
+      label: "Status (statecode)",
+      value: employee.statusRegistro === undefined
+        ? ""
+        : employee.statusRegistro === 0
+          ? "Ativo"
+          : "Inativo",
+    },
+  ];
 
   const handleCopyEmail = () => {
     if (!employee.emailCorporativo) return;
@@ -180,28 +249,30 @@ Risco: ${risk}`;
     <div className="fixed inset-0 z-50 overflow-hidden flex justify-end" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
       {/* Backdrop overlay */}
       <div
-          className="absolute inset-0 bg-[#395886]/30 backdrop-blur-[3px] transition-opacity"
+          className="absolute inset-0 bg-sky-900/30 backdrop-blur-[3px] transition-opacity"
         onClick={onClose}
       />
 
       {/* Flyout panel */}
-      <div className="relative w-full max-w-xl bg-[#f0f3fa] h-full shadow-[0_0_70px_rgba(57,88,134,0.28)] flex flex-col z-10 transition-transform duration-300 translate-x-0 sm:rounded-l-[28px] overflow-hidden">
+      <div className="relative w-full max-w-xl bg-slate-50 h-full shadow-[0_0_70px_rgba(0,48,87,0.28)] flex flex-col z-10 transition-transform duration-300 translate-x-0 sm:rounded-l-[28px] overflow-hidden">
         {/* Header */}
         <div className="border-b border-sky-100 bg-white px-5 py-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-yinmn to-cadet text-sm font-bold text-white shadow-[0_8px_20px_rgba(99,142,203,0.24)]">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-yinmn to-cadet text-sm font-bold text-white shadow-[0_8px_20px_rgba(0,97,132,0.24)]">
                 {initials || <User className="h-5 w-5" />}
               </div>
               <div className="min-w-0">
-                <span className="mb-0.5 block text-[9px] font-bold uppercase tracking-[0.16em] text-yinmn">Perfil do funcionário</span>
+                <span className="mb-0.5 block text-[9px] font-bold uppercase tracking-[0.16em] text-yinmn">Nome completo</span>
                 <h2 id="slide-over-title" className="max-w-[320px] truncate text-base font-bold tracking-tight text-oxford">
                   {employee.nome}
                 </h2>
                 <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[10px] text-slate-400">
                   <span>{employee.cargo || "Cargo não informado"}</span>
                   <span aria-hidden="true">•</span>
-                  <span className="font-mono">{employee.idFuncionario || "ID pendente"}</span>
+                  <span className="font-mono">
+                    Employee ID: {employee.idFuncionario || "Pendente"}
+                  </span>
                 </p>
               </div>
             </div>
@@ -231,8 +302,8 @@ Risco: ${risk}`;
           {/* Dados do Cargo e Turno */}
           <div className="space-y-4">
             <h3 className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">Informações</h3>
-            <div className="grid grid-cols-2 gap-2.5">
-              <div className="bg-white p-3.5 rounded-[16px] border border-sky-100 shadow-[0_8px_20px_rgba(57,88,134,0.04)]">
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              <div className="bg-white p-3.5 rounded-[16px] border border-sky-100 shadow-[0_8px_20px_rgba(0,48,87,0.04)]">
                 <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">
                   <BriefcaseBusiness className="w-3.5 h-3.5" />
                   <span className="text-[10px] uppercase font-bold">Cargo</span>
@@ -242,7 +313,7 @@ Risco: ${risk}`;
                 </p>
               </div>
 
-              <div className="bg-white p-3.5 rounded-[16px] border border-sky-100 shadow-[0_8px_20px_rgba(57,88,134,0.04)]">
+              <div className="bg-white p-3.5 rounded-[16px] border border-sky-100 shadow-[0_8px_20px_rgba(0,48,87,0.04)]">
                 <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">
                   <Clock className="w-3.5 h-3.5" />
                   <span className="text-[10px] uppercase font-bold">Turno</span>
@@ -252,7 +323,7 @@ Risco: ${risk}`;
                 </p>
               </div>
 
-              <div className="bg-white p-3.5 rounded-[16px] border border-sky-100 shadow-[0_8px_20px_rgba(57,88,134,0.04)]">
+              <div className="bg-white p-3.5 rounded-[16px] border border-sky-100 shadow-[0_8px_20px_rgba(0,48,87,0.04)]">
                 <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">
                   <MapPin className="w-3.5 h-3.5" />
                   <span className="text-[10px] uppercase font-bold">Zona</span>
@@ -262,7 +333,7 @@ Risco: ${risk}`;
                 </p>
               </div>
 
-              <div className="bg-white p-3.5 rounded-[16px] border border-sky-100 shadow-[0_8px_20px_rgba(57,88,134,0.04)]">
+              <div className="bg-white p-3.5 rounded-[16px] border border-sky-100 shadow-[0_8px_20px_rgba(0,48,87,0.04)]">
                 <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">
                   <Globe2 className="w-3.5 h-3.5" />
                   <span className="text-[10px] uppercase font-bold">Idiomas</span>
@@ -274,15 +345,36 @@ Risco: ${risk}`;
             </div>
           </div>
 
+          <div className="space-y-3">
+            <h3 className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">
+              Dados adicionais
+            </h3>
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              {additionalDetails.map((detail) => (
+                <div
+                  key={detail.label}
+                  className="min-w-0 rounded-[16px] border border-sky-100 bg-white p-3.5 shadow-[0_8px_20px_rgba(0,48,87,0.04)]"
+                >
+                  <span className="mb-1.5 block text-[10px] font-bold uppercase text-slate-400">
+                    {detail.label}
+                  </span>
+                  <p className="break-words text-xs font-bold text-oxford">
+                    {detail.value || "Não informado"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Datas de Contrato */}
           <div className="space-y-3">
-            <h3 className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">Vigência contratual</h3>
-            <div className="overflow-hidden rounded-[18px] border border-sky-100 bg-white shadow-[0_8px_20px_rgba(57,88,134,0.04)]">
+            <h3 className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">Informações Contratual</h3>
+            <div className="overflow-hidden rounded-[18px] border border-sky-100 bg-white shadow-[0_8px_20px_rgba(0,48,87,0.04)]">
               <div className="grid grid-cols-2 divide-x divide-sky-100">
                 <div className="p-3.5">
                   <div className="mb-1.5 flex items-center gap-1.5 text-slate-400">
                     <Calendar className="h-3.5 w-3.5" />
-                    <span className="text-[9px] font-bold uppercase">Admissão</span>
+                    <span className="text-[9px] font-bold uppercase">Data de Admissão</span>
                   </div>
                   <p className="text-xs font-semibold text-oxford">
                     {formatarDataBR(employee.dataAdmissao)}
@@ -292,7 +384,7 @@ Risco: ${risk}`;
                 <div className="p-3.5">
                   <div className="mb-1.5 flex items-center gap-1.5 text-slate-400">
                     <Calendar className="h-3.5 w-3.5" />
-                    <span className="text-[9px] font-bold uppercase">Término previsto</span>
+                    <span className="text-[9px] font-bold uppercase">Término de Contrato</span>
                   </div>
                   <p className="text-xs font-semibold text-oxford">
                     {formatarDataBR(employee.dataTerminoReal)}
@@ -321,7 +413,7 @@ Risco: ${risk}`;
                     aria-valuenow={contractProgress}
                     className="h-1.5 overflow-hidden rounded-full bg-sky-100"
                   >
-                    <div className="h-full rounded-full bg-gradient-to-r from-yinmn to-[#8aaee0]" style={{ width: `${contractProgress}%` }} />
+                    <div className="h-full rounded-full bg-gradient-to-r from-yinmn to-jordy" style={{ width: `${contractProgress}%` }} />
                   </div>
                   <div className="mt-1.5 flex justify-between text-[8px] font-medium text-slate-400">
                     <span>Início</span>
@@ -333,19 +425,79 @@ Risco: ${risk}`;
             </div>
           </div>
 
+          {/* Ferias e ausencias */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">
+                {"F\u00e9rias e aus\u00eancias"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => onConfigureVacation(employee)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-sky-100 bg-white px-3 py-2 text-[10px] font-bold text-yinmn transition hover:bg-sky-50"
+              >
+                <FileEdit className="h-3.5 w-3.5" />
+                {"Configurar f\u00e9rias"}
+              </button>
+            </div>
+
+            <div className="overflow-hidden rounded-[18px] border border-sky-100 bg-white shadow-[0_8px_20px_rgba(0,48,87,0.04)]">
+              <div className="flex items-center justify-between gap-3 border-b border-sky-100 bg-sky-50/50 p-3.5">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-yinmn">
+                    <Plane className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <span className="block text-[9px] font-bold uppercase text-slate-400">
+                      {"Situa\u00e7\u00e3o atual"}
+                    </span>
+                    <strong className="text-xs text-oxford">{vacationStatus}</strong>
+                  </div>
+                </div>
+                {employee.diasVendidosFerias > 0 && (
+                  <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[9px] font-bold text-amber-700">
+                    {employee.diasVendidosFerias} dias de abono
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-2 p-3.5">
+                {vacationPeriods.length > 0 ? vacationPeriods.map((period, index) => (
+                  <div key={period.recordId || `${period.dataInicio}-${index}`} className="flex items-center justify-between gap-3 rounded-xl border border-sky-50 bg-slate-50/70 p-3">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <Calendar className="h-3.5 w-3.5 shrink-0 text-yinmn" />
+                      <div className="min-w-0">
+                        <span className="block text-[9px] font-bold uppercase text-slate-400">{"Per\u00edodo"} {index + 1}</span>
+                        <span className="block text-xs font-semibold text-oxford">
+                          {formatarDataBR(period.dataInicio)} a {formatarDataBR(period.dataFim)}
+                        </span>
+                      </div>
+                    </div>
+                    <strong className="shrink-0 text-[10px] text-slate-500">{period.dias} dias</strong>
+                  </div>
+                )) : (
+                  <div className="py-3 text-center">
+                    <p className="text-xs font-semibold text-slate-500">{"Nenhum per\u00edodo registrado."}</p>
+                    <p className="mt-1 text-[10px] text-slate-400">{"Use o bot\u00e3o acima para configurar as datas."}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Contatos Corporativos */}
           <div className="space-y-4">
             <h3 className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">Contatos</h3>
             
             <div className="space-y-2">
               {/* E-mail */}
-              <div className="flex items-center justify-between rounded-[16px] border border-sky-100 bg-white p-3 shadow-[0_6px_16px_rgba(57,88,134,0.035)] transition-all hover:border-sky-200">
+              <div className="flex items-center justify-between rounded-[16px] border border-sky-100 bg-white p-3 shadow-[0_6px_16px_rgba(0,48,87,0.035)] transition-all hover:border-sky-200">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-yinmn">
                     <Mail className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
-                    <span className="text-[9px] uppercase font-bold text-gray-400 block">E-mail Corporativo</span>
+                    <span className="text-[9px] uppercase font-bold text-gray-400 block">Corporate Email</span>
                     <p className="text-xs text-gray-700 truncate font-semibold">
                       {employee.emailCorporativo || "Não cadastrado"}
                     </p>
@@ -363,14 +515,33 @@ Risco: ${risk}`;
                 )}
               </div>
 
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {[
+                  { label: "BYU Email", value: employee.emailBYU },
+                  { label: "Personal Email", value: employee.emailPessoal },
+                ].map((contact) => (
+                  <div
+                    key={contact.label}
+                    className="min-w-0 rounded-[16px] border border-sky-100 bg-white p-3 shadow-[0_6px_16px_rgba(0,48,87,0.035)]"
+                  >
+                    <span className="block text-[9px] font-bold uppercase text-slate-400">
+                      {contact.label}
+                    </span>
+                    <p className="break-all text-xs font-semibold text-slate-700">
+                      {contact.value || "Não cadastrado"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
               {/* Zoom Link */}
-              <div className="flex items-center justify-between rounded-[16px] border border-sky-100 bg-white p-3 shadow-[0_6px_16px_rgba(57,88,134,0.035)] transition-all hover:border-sky-200">
+              <div className="flex items-center justify-between rounded-[16px] border border-sky-100 bg-white p-3 shadow-[0_6px_16px_rgba(0,48,87,0.035)] transition-all hover:border-sky-200">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#d5deef] text-[#395886]">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-900">
                     <Video className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
-                    <span className="text-[9px] uppercase font-bold text-gray-400 block">Sala Pessoal do Zoom</span>
+                    <span className="text-[9px] uppercase font-bold text-gray-400 block">Zoom Link</span>
                     <p className="text-xs text-gray-700 truncate font-semibold">
                       {employee.linkZoom || "Não cadastrado"}
                     </p>
@@ -397,7 +568,7 @@ Risco: ${risk}`;
           {/* Pendências identificadas */}
           {pendencias.length > 0 && (
             <div className="p-4 rounded-xl bg-red-50 border border-red-100 space-y-2">
-              <div className="flex items-center gap-2 text-[#DC2626]">
+              <div className="flex items-center gap-2 text-red-500">
                 <AlertTriangle className="w-4 h-4" />
                 <h4 className="text-xs font-black uppercase tracking-wider">Inconsistências Cadastrais ({pendencias.length})</h4>
               </div>
@@ -413,7 +584,7 @@ Risco: ${risk}`;
           )}
 
           {/* Seção Linha do Tempo */}
-          <div className="space-y-4 rounded-[18px] border border-sky-100 bg-white p-4 shadow-[0_8px_20px_rgba(57,88,134,0.04)]">
+          <div className="space-y-4 rounded-[18px] border border-sky-100 bg-white p-4 shadow-[0_8px_20px_rgba(0,48,87,0.04)]">
             <div className="flex items-center justify-between">
               <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-yinmn" />
@@ -431,6 +602,7 @@ Risco: ${risk}`;
                 <option value="Contrato">Contrato</option>
                 <option value="Férias">Férias</option>
                 <option value="Substituição">Substituição</option>
+                <option value="Idioma">Idioma</option>
                 <option value="Risco">Risco</option>
                 <option value="Alteração administrativa">Alt. Administrativa</option>
               </select>
@@ -438,6 +610,12 @@ Risco: ${risk}`;
 
             {/* Linha do tempo visual */}
             <div className="relative ml-2.5 space-y-3 border-l-2 border-sky-100 pb-1 pl-4 pt-1">
+              {timelineLoading && (
+                <p className="text-xs text-slate-400 font-semibold">Carregando histórico do Dataverse...</p>
+              )}
+              {timelineError && (
+                <p role="alert" className="text-xs text-rose-600 font-semibold">{timelineError}</p>
+              )}
               {events
                 .filter((evt) => selectedCategory === "all" || evt.categoria === selectedCategory)
                 .map((evt) => {
@@ -461,6 +639,10 @@ Risco: ${risk}`;
                     bulletBg = "bg-amber-500";
                     categoryColor = "text-amber-600";
                     Icon = RefreshCw;
+                  } else if (evt.categoria === "Idioma") {
+                    bulletBg = "bg-violet-500";
+                    categoryColor = "text-violet-600";
+                    Icon = Globe2;
                   } else if (evt.categoria === "Risco") {
                     bulletBg = "bg-rose-500";
                     categoryColor = "text-rose-600";
@@ -479,7 +661,7 @@ Risco: ${risk}`;
                       </span>
 
                       {/* Event Details */}
-                      <div className="space-y-1 rounded-xl border border-sky-100 bg-[#f0f3fa] p-3 text-xs transition-colors hover:border-sky-200">
+                      <div className="space-y-1 rounded-xl border border-sky-100 bg-slate-50 p-3 text-xs transition-colors hover:border-sky-200">
                         <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">
                           <span>{formatarDataBR(evt.data)}</span>
                           <span className={`uppercase text-[8px] font-black ${categoryColor}`}>{evt.categoria}</span>
@@ -488,7 +670,7 @@ Risco: ${risk}`;
                           <Icon className="w-3.5 h-3.5 shrink-0" />
                           <span>{evt.tipo}</span>
                         </h4>
-                        <p className="text-xs text-slate-500 leading-relaxed font-semibold">{evt.descricao}</p>
+                        <p className="break-words text-xs text-slate-500 leading-relaxed font-semibold">{evt.descricao}</p>
                         {evt.responsavel && (
                           <div className="text-[10px] text-slate-400 font-medium">
                             Responsável: <span className="font-bold text-slate-500">{evt.responsavel}</span>
@@ -506,7 +688,7 @@ Risco: ${risk}`;
 
               {events.filter((evt) => selectedCategory === "all" || evt.categoria === selectedCategory).length === 0 && (
                 <p className="text-xs text-slate-400 font-semibold italic text-center py-2">
-                  Nenhum evento registrado nesta categoria.
+                  {timelineLoading || timelineError ? "" : "Nenhum evento registrado nesta categoria."}
                 </p>
               )}
             </div>
@@ -514,11 +696,18 @@ Risco: ${risk}`;
             {/* Formulário rápido para adicionar observação */}
             <form onSubmit={handleAddObservation} className="space-y-2.5 rounded-xl border border-sky-100 bg-sky-50/60 p-3">
               <span className="block text-[9px] font-black uppercase tracking-wide text-slate-400">Adicionar ao histórico</span>
+              <p
+                className={`text-[10px] font-medium ${erroIdentificacaoUsuario ? "text-rose-600" : "text-slate-500"}`}
+                role={erroIdentificacaoUsuario ? "alert" : undefined}
+              >
+                Responsável: {responsavelAtual || (erroIdentificacaoUsuario ? "Não foi possível identificar o usuário" : "Identificando usuário...")}
+              </p>
               <div className="grid grid-cols-[1fr_auto_auto] gap-2">
                 <input
                   type="text"
                   placeholder="Escreva uma observação..."
                   value={newObs}
+                  maxLength={850}
                   onChange={(e) => setNewObs(e.target.value)}
                   className="min-w-0 text-xs bg-white border border-sky-100 rounded-lg px-3 py-2 focus:outline-none focus:border-jordy text-slate-700"
                 />
@@ -533,15 +722,18 @@ Risco: ${risk}`;
                   <option value="Contrato">Contrato</option>
                   <option value="Férias">Férias</option>
                   <option value="Substituição">Subst.</option>
+                  <option value="Idioma">Idioma</option>
                   <option value="Risco">Risco</option>
                 </select>
 
                 <button
                   type="submit"
-                  className="bg-yinmn hover:bg-cadet text-white font-bold p-2 rounded-lg transition-all"
+                  disabled={!responsavelAtual || timelineSaving || !newObs.trim()}
+                  className="bg-yinmn hover:bg-cadet text-white font-bold p-2 rounded-lg transition-all disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="Adicionar registro ao histórico"
+                  title={!responsavelAtual ? "Aguardando identificação do usuário" : undefined}
                 >
-                  <Plus className="w-4 h-4" />
+                  {timelineSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                 </button>
               </div>
             </form>
@@ -572,7 +764,7 @@ Risco: ${risk}`;
           {/* Editar Cadastro */}
           <button
             onClick={() => onEdit(employee)}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-yinmn px-4 py-2.5 text-[11px] font-bold text-white shadow-[0_8px_18px_rgba(99,142,203,0.22)] transition-all hover:bg-cadet active:scale-[0.98]"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-yinmn px-4 py-2.5 text-[11px] font-bold text-white shadow-[0_8px_18px_rgba(0,97,132,0.22)] transition-all hover:bg-cadet active:scale-[0.98]"
           >
             <FileEdit className="w-4 h-4" />
             <span>Editar cadastro</span>

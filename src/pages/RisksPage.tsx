@@ -1,134 +1,191 @@
-import { RiskHeatmapMatrix } from "../components/RiskHeatmapMatrix";
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   AlertTriangle,
   Flame,
-  ShieldAlert,
-  Sliders,
-  CheckCircle2,
   FileQuestion,
   TrendingUp,
   MapPin,
   Clock,
   Languages,
   Plane,
-  Grid,
   Info,
   Calendar,
-  AlertOctagon,
   CornerDownRight
 } from "lucide-react";
-import { RhEmployee, RiskLevel } from "../types/rh";
-import { calcularRisco, identificarPendencias } from "../utils/riskUtils";
+import { AppSettings, RhEmployee } from "../types/rh";
+import { calcularRisco } from "../utils/riskUtils";
 import { formatarDataBR, calcularDiasRestantes } from "../utils/dateUtils";
-import { RiskBadge } from "../components/RiskBadge";
 import { calcularStatusFerias } from "../utils/vacationUtils";
 import { obterSubstituicoes } from "../services/additionalDataSource";
-import { gerarDatasNoIntervalo } from "../utils/absenceUtils";
-import { TURNOS_DISPONIVEIS } from "../constants/turnos";
+import { normalizarTurno } from "../constants/turnos";
 
 interface RisksPageProps {
   employees: RhEmployee[];
+  catalogs: Pick<AppSettings, "idiomas" | "zonas" | "turnos">;
   onSelectEmployee: (emp: RhEmployee) => void;
 }
 
 type HeatmapMode = "idioma_turno" | "idioma_zona" | "zona_turno" | "periodo_ausencia";
 
-export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmployee }) => {
+type HeatmapRisk = "Sem dados" | "Verde" | "Azul" | "Amarelo" | "Laranja" | "Vermelho";
+
+type SelectedCellInfo = {
+  title: string;
+  activeCount: number;
+  contratos30: number;
+  contratos60: number;
+  subsPendentes: number;
+  ausenciasFuturas: number;
+  nivel: HeatmapRisk;
+  recomendacao: string;
+  funcionarios: RhEmployee[];
+  listaNomes?: string[];
+};
+
+function valoresUnicos(valores: Array<string | undefined>): string[] {
+  const vistos = new Set<string>();
+  return valores.reduce<string[]>((resultado, valor) => {
+    const nome = valor?.trim();
+    if (!nome) return resultado;
+
+    const chave = nome.toLocaleLowerCase("pt-BR");
+    if (!vistos.has(chave)) {
+      vistos.add(chave);
+      resultado.push(nome);
+    }
+
+    return resultado;
+  }, []);
+}
+
+export const RisksPage: React.FC<RisksPageProps> = ({ employees, catalogs, onSelectEmployee }) => {
   const [activeView, setActiveView] = useState<"ranking" | "heatmap">("heatmap");
   const [heatmapMode, setHeatmapMode] = useState<HeatmapMode>("idioma_turno");
-  const [selectedCellInfo, setSelectedCellInfo] = useState<any | null>(null);
+  const [selectedCellInfo, setSelectedCellInfo] = useState<SelectedCellInfo | null>(null);
 
   const actives = employees.filter((e) => e.statusFuncionario === "Ativo");
   const substitutions = obterSubstituicoes();
-
-  // 1. PROCESSAR COUNTERS
-  const riscos = actives.map((e) => calcularRisco(e));
-  
-  const totalCriticos = riscos.filter((r) => r === "Crítico").length;
-  const totalAltos = riscos.filter((r) => r === "Alto").length;
-  const totalMedios = riscos.filter((r) => r === "Médio").length;
+  const IDIOMAS = valoresUnicos([
+    ...catalogs.idiomas,
+    ...actives.flatMap((employee) => employee.idiomas || []),
+  ]);
+  const ZONAS = valoresUnicos([
+    ...catalogs.zonas,
+    ...actives.map((employee) => employee.zona),
+  ]);
+  const TURNOS = valoresUnicos([
+    ...catalogs.turnos,
+    ...actives.map((employee) => employee.turno),
+  ].map(normalizarTurno));
 
   const incompletosImpeditivos = actives.filter(
     (e) => !e.dataTerminoReal || e.dataTerminoReal.trim() === ""
   ).length;
 
-  const idiomasCount: Record<string, number> = {};
+  const idiomasCount = new Map<string, number>();
   actives.forEach((e) => {
-    if (e.idiomas) {
-      e.idiomas.forEach((l) => {
-        if (l) idiomasCount[l] = (idiomasCount[l] || 0) + 1;
-      });
-    }
+    const idiomasFuncionario = new Set(
+      (e.idiomas || []).map((idioma) => idioma.trim().toLocaleLowerCase("pt-BR"))
+    );
+    idiomasFuncionario.forEach((idioma) => {
+      idiomasCount.set(idioma, (idiomasCount.get(idioma) || 0) + 1);
+    });
   });
 
-  const baixaCoberturaIdiomas = Object.entries(idiomasCount)
-    .filter(([_, count]) => count <= 1)
-    .map(([lang]) => lang);
+  const baixaCoberturaIdiomas = IDIOMAS
+    .map((idioma) => ({
+      nome: idioma,
+      quantidade: idiomasCount.get(idioma.trim().toLocaleLowerCase("pt-BR")) || 0,
+    }))
+    .filter((idioma) => idioma.quantidade <= 1);
 
   const totalVacationCritical = actives.filter((e) => calcularStatusFerias(e) === "Férias críticas").length;
+  const contratos30Dias = actives.filter((employee) => {
+    const dias = calcularDiasRestantes(employee.dataTerminoReal);
+    return dias !== null && dias >= 0 && dias <= 30;
+  });
+  const contratos60Dias = actives.filter((employee) => {
+    const dias = calcularDiasRestantes(employee.dataTerminoReal);
+    return dias !== null && dias > 30 && dias <= 60;
+  });
+  const combinacoesZonaTurno = new Map<string, number>();
+  actives.forEach((employee) => {
+    if (!employee.zona?.trim() || !employee.turno?.trim()) return;
+    const chave = `${employee.zona.trim().toLocaleLowerCase("pt-BR")}|${normalizarTurno(employee.turno).toLocaleLowerCase("pt-BR")}`;
+    combinacoesZonaTurno.set(chave, (combinacoesZonaTurno.get(chave) || 0) + 1);
+  });
+  const coberturasZonaTurnoUnicas = Array.from(combinacoesZonaTurno.entries())
+    .filter(([, count]) => count === 1)
+    .map(([chave]) => {
+      const [zona, turno] = chave.split("|");
+      const employee = actives.find((item) =>
+    item.zona.trim().toLocaleLowerCase("pt-BR") === zona &&
+    normalizarTurno(item.turno).toLocaleLowerCase("pt-BR") === turno
+      );
+      return employee ? `${employee.zona} • ${normalizarTurno(employee.turno)}` : `${zona} • ${turno}`;
+    });
 
   // 2. CONSTRUÇÃO DO RANKING DE RISCOS OPERACIONAIS
   const topRiscosAlerts = [
-    {
-      id: 1,
-      title: "Japonês: Cobertura Crítica e Vencimento Próximo",
-      severity: "Crítico" as const,
-      category: "Idioma",
-      desc: "Yuki Tanaka (único Funcionário de Japonês) tem seu contrato de trabalho vencendo em menos de 15 dias.",
-      recommendation: "Iniciar processo seletivo emergencial para substituição ou propor renovação aditiva em até 48h.",
-      icon: Languages,
-    },
-    {
-      id: 2,
-      title: "Vencimentos Contratuais Iminentes (Menos de 15 dias)",
+    ...(contratos30Dias.length > 0 ? [{
+      id: "contratos-30",
+      title: "Contratos com término nos próximos 30 dias",
       severity: "Crítico" as const,
       category: "Contrato",
-      desc: `Identificados ${totalCriticos} funcionários ativos com prazo contratual expirando nos próximos dias, incluindo Marcos Vinícius (Português) e Carlos Augusto (Espanhol).`,
-      recommendation: "Emitir termos aditivos de prorrogação ou programar os exames demissionais de encerramento de vínculo.",
+      desc: `${contratos30Dias.length} funcionário(s) ativo(s) têm término de contrato previsto nos próximos 30 dias.`,
+      recommendation: "Revise as decisões de renovação e planeje a cobertura dos vínculos com vencimento próximo.",
       icon: Flame,
-    },
-    {
-      id: 3,
-      title: "Férias Críticas Acumuladas (Passivo Trabalhista & Cobertura)",
+    }] : []),
+    ...(baixaCoberturaIdiomas.length > 0 ? [{
+      id: "cobertura-idiomas",
+      title: "Idiomas com cobertura baixa ou inexistente",
+      severity: "Alto" as const,
+      category: "Idioma",
+      desc: `Cobertura ativa de até um funcionário nos idiomas: ${baixaCoberturaIdiomas.map((idioma) => `${idioma.nome} (${idioma.quantidade})`).join(", ")}.`,
+      recommendation: "Avalie alternativas de cobertura ou remanejamento para esses idiomas.",
+      icon: Languages,
+    }] : []),
+    ...(totalVacationCritical > 0 ? [{
+      id: "ferias-criticas",
+      title: "Funcionários com férias críticas",
       severity: "Alto" as const,
       category: "Férias",
-      desc: `Identificados ${totalVacationCritical} instrutores em estado crítico de férias acumuladas sem marcação, com mais de 1 ano e 6 meses de trabalho ininterrupto.`,
-      recommendation: "Exigir a programação imediata de férias para os casos críticos, escalonando as folgas para mitigar desfalques simultâneos.",
+      desc: `${totalVacationCritical} funcionário(s) ativo(s) estão classificados com férias críticas.`,
+      recommendation: "Revise os períodos aquisitivos e programe as férias para reduzir o risco trabalhista e operacional.",
       icon: Plane,
-    },
-    {
-      id: 4,
-      title: "Concentração de Saídas na Zona Norte (Inglês)",
-      severity: "Alto" as const,
-      category: "Geográfico",
-      desc: "A Zona Norte possui concentração elevada de saídas de instrutores de Inglês planejadas para os próximos 30 dias.",
-      recommendation: "Remanejar temporariamente 1 instrutor da Zona Leste para apoiar a grade acadêmica da Zona Norte.",
-      icon: MapPin,
-    },
-    {
-      id: 5,
-      title: "Cadastros Sem Data de Término (Impede Auditoria)",
+    }] : []),
+    ...(contratos60Dias.length > 0 ? [{
+      id: "contratos-60",
+      title: "Contratos com término entre 31 e 60 dias",
+      severity: "Médio" as const,
+      category: "Contrato",
+      desc: `${contratos60Dias.length} funcionário(s) ativo(s) têm término previsto entre 31 e 60 dias.`,
+      recommendation: "Inicie a análise de renovação e prepare alternativas de cobertura.",
+      icon: Clock,
+    }] : []),
+    ...(incompletosImpeditivos > 0 ? [{
+      id: "datas-incompletas",
+      title: "Cadastros ativos sem data de término",
       severity: "Médio" as const,
       category: "Integridade",
-      desc: `Existem ${incompletosImpeditivos} registros ativos sem data de término definida, o que inviabiliza as projeções automáticas de reposição do sistema.`,
-      recommendation: "Cobrar a secretaria e o RH para complementação das datas de encerramento de Roberto Gimenes e assemelhados.",
+      desc: `${incompletosImpeditivos} funcionário(s) ativo(s) estão sem data de término de contrato.`,
+      recommendation: "Complete as datas de término para que esses vínculos possam ser considerados nas projeções.",
       icon: FileQuestion,
-    },
-    {
-      id: 6,
-      title: "Baixa Cobertura Ativa de Idioma Singular",
+    }] : []),
+    ...(coberturasZonaTurnoUnicas.length > 0 ? [{
+      id: "cobertura-zona-turno",
+      title: "Combinações de zona e turno com cobertura unitária",
       severity: "Médio" as const,
-      category: "Alocação",
-      desc: `Os seguintes idiomas possuem apenas um instrutor ativo cadastrado no CTM: ${baixaCoberturaIdiomas.join(", ") || "Nenhum"}.`,
-      recommendation: "Planejar banco de talentos reserva para mitigar riscos de licenças médicas repentinas.",
-      icon: Sliders,
-    }
+      category: "Zona e turno",
+      desc: `Há apenas um funcionário ativo nas combinações: ${coberturasZonaTurnoUnicas.join(", ")}.`,
+      recommendation: "Verifique se há possibilidade de cobertura alternativa para essas zonas e turnos.",
+      icon: MapPin,
+    }] : []),
   ];
 
   const contratosRiscoMaximo = actives
@@ -144,9 +201,9 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
   const calcularMetricasCelula = (filtros: { idioma?: string; turno?: string; zona?: string }) => {
     // Filtrar instrutores ativos nessa interseção
     const ativosCelula = actives.filter((e) => {
-      const matchLang = !filtros.idioma || e.idiomas?.some((l) => l.toLowerCase() === filtros.idioma?.toLowerCase());
-      const matchTurno = !filtros.turno || e.turno?.toLowerCase() === filtros.turno?.toLowerCase();
-      const matchZona = !filtros.zona || e.zona?.toLowerCase() === filtros.zona?.toLowerCase();
+      const matchLang = !filtros.idioma || e.idiomas?.some((l) => l.trim().toLocaleLowerCase("pt-BR") === filtros.idioma?.trim().toLocaleLowerCase("pt-BR"));
+      const matchTurno = !filtros.turno || normalizarTurno(e.turno || "").trim().toLocaleLowerCase("pt-BR") === normalizarTurno(filtros.turno).trim().toLocaleLowerCase("pt-BR");
+      const matchZona = !filtros.zona || e.zona?.trim().toLocaleLowerCase("pt-BR") === filtros.zona?.trim().toLocaleLowerCase("pt-BR");
       return matchLang && matchTurno && matchZona;
     });
 
@@ -174,20 +231,18 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
     const ausenciasFuturas = ativosCelula.filter((e) => e.periodosFerias && e.periodosFerias.length > 0).length;
 
     // Calcular nível de risco
-    let nivel: "Verde" | "Azul" | "Amarelo" | "Laranja" | "Vermelho" = "Verde";
-    let recomendacao = "Célula estável. Cobertura Funcionário em conformidade com as diretrizes acadêmicas.";
+    let nivel: HeatmapRisk = activeCount === 0 ? "Sem dados" : "Verde";
+    let recomendacao = "Combinação sem funcionários ativos cadastrados. Verifique se há demanda de cobertura.";
 
     if (activeCount === 0) {
-      // Se não há Funcionários cadastrados para essa combinação de idioma/turno/zona
-      nivel = "Vermelho";
-      recomendacao = "Gargalo Crítico! Não há nenhum instrutor ativo para cobrir essa demanda linguística/local.";
+      recomendacao = "Não há funcionários ativos cadastrados nesta combinação.";
     } else if (activeCount === 1) {
       if (contratos30 > 0 || subsPendentes > 0) {
         nivel = "Vermelho";
-        recomendacao = "Risco de colapso de grade acadêmica! Único Funcionário ativo possui contrato expirando em 30 dias ou ausência não coberta.";
+        recomendacao = "Risco de colapso de grade acadêmica! O único funcionário ativo possui contrato expirando em 30 dias ou ausência não coberta.";
       } else {
         nivel = "Laranja";
-        recomendacao = "Vulnerabilidade operacional. Apenas 1 Funcionário ativo. Qualquer licença resultará em desfalque.";
+        recomendacao = "Vulnerabilidade operacional. Há apenas um funcionário ativo; qualquer licença poderá causar desfalque.";
       }
     } else if (activeCount >= 2) {
       if (contratos30 > 0 || subsPendentes > 0) {
@@ -195,7 +250,7 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
         recomendacao = "Atenção requerida. Há contratos vencendo ou ausências pendentes que demandam novas alocações.";
       } else if (contratos60 > 0 || ausenciasFuturas > 0) {
         nivel = "Azul";
-        recomendacao = "Acompanhamento preventivo. Planejar escala de férias futura para evitar acúmulos.";
+        recomendacao = "Acompanhamento preventivo. Planeje a escala de férias futura para evitar acúmulos.";
       }
     }
 
@@ -206,12 +261,15 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
       subsPendentes,
       ausenciasFuturas,
       nivel,
-      recomendacao
+      recomendacao,
+      funcionarios: ativosCelula,
     };
   };
 
   const getHeatmapColor = (nivel: string) => {
     switch (nivel) {
+      case "Sem dados":
+        return "bg-slate-100 hover:bg-slate-200 text-slate-500 border border-slate-200";
       case "Vermelho":
         return "bg-rose-500 hover:bg-rose-600 text-white shadow-md shadow-rose-100/30 border border-rose-300";
       case "Laranja":
@@ -225,16 +283,18 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
     }
   };
 
-  const IDIOMAS = ["Inglês", "Espanhol", "Francês", "Japonês", "Alemão", "Mandarim", "Italiano", "Português"];
-  const ZONAS = ["Zona Sul", "Zona Norte", "Zona Leste", "Zona Oeste", "Administrativo"];
-  const MESES = [
-    { label: "Julho/26", key: "2026-07" },
-    { label: "Agosto/26", key: "2026-08" },
-    { label: "Setembro/26", key: "2026-09" },
-    { label: "Outubro/26", key: "2026-10" },
-    { label: "Novembro/26", key: "2026-11" },
-    { label: "Dezembro/26", key: "2026-12" }
-  ];
+  const MESES = Array.from({ length: 6 }, (_, index) => {
+    const date = new Date();
+    date.setDate(1);
+    date.setMonth(date.getMonth() + index);
+    const ano = date.getFullYear();
+    const mes = String(date.getMonth() + 1).padStart(2, "0");
+
+    return {
+      label: date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
+      key: `${ano}-${mes}`,
+    };
+  });
 
   // Cálculo de limite simultâneo por mês para Período x Ausências
   const obterAusenciasNoMes = (anoMes: string) => {
@@ -242,9 +302,12 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
     const ausentesSet = new Set<string>();
     
     // Varre férias
-    employees.forEach((emp) => {
+    actives.forEach((emp) => {
       emp.periodosFerias?.forEach((f) => {
-        if (f.dataInicio.startsWith(anoMes) || f.dataFim.startsWith(anoMes)) {
+        const [ano, mes] = anoMes.split("-").map(Number);
+        const inicioMes = `${anoMes}-01`;
+        const fimMes = new Date(ano, mes, 0).toISOString().slice(0, 10);
+        if (f.dataInicio && f.dataFim && f.dataInicio <= fimMes && f.dataFim >= inicioMes) {
           ausentesSet.add(emp.nome);
         }
       });
@@ -252,8 +315,14 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
 
     // Varre substituições
     substitutions.forEach((s) => {
-      if (s.status !== "Cancelada") {
-        if (s.dataInicio.startsWith(anoMes) || s.dataFim.startsWith(anoMes)) {
+      const funcionarioAtivo = actives.some(
+        (employee) => employee.nome.trim().toLocaleLowerCase("pt-BR") === s.instrutorAusente.trim().toLocaleLowerCase("pt-BR")
+      );
+      if (funcionarioAtivo && s.status !== "Cancelada" && s.status !== "Concluída") {
+        const [ano, mes] = anoMes.split("-").map(Number);
+        const inicioMes = `${anoMes}-01`;
+        const fimMes = new Date(ano, mes, 0).toISOString().slice(0, 10);
+        if (s.dataInicio && s.dataFim && s.dataInicio <= fimMes && s.dataFim >= inicioMes) {
           ausentesSet.add(s.instrutorAusente);
         }
       }
@@ -271,7 +340,7 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
       recomendacao = `Alto Risco! ${count} ausências simultâneas projetadas. Recomenda-se suspender novos pedidos de folga para este mês.`;
     } else if (count >= 4) {
       nivel = "Amarelo";
-      recomendacao = `Atenção. ${count} ausências programadas. Planejamento de cobertura Funcionário preventiva recomendado.`;
+      recomendacao = `Atenção. ${count} ausências programadas. Recomenda-se planejar a cobertura preventiva da equipe.`;
     }
 
     return {
@@ -285,14 +354,14 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
   return (
     <div className="space-y-6">
       {/* Page Title & Sub-tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-[22px] border border-white bg-gradient-to-br from-[#d5deef] to-[#f0f3fa] p-5 shadow-[0_12px_30px_rgba(57,88,134,0.07)] gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-[22px] border border-white bg-gradient-to-br from-slate-100 to-white p-5 shadow-[0_12px_30px_rgba(0,48,87,0.07)] gap-4">
         <div>
           <h2 className="text-lg sm:text-xl font-extrabold text-oxford flex items-center gap-2.5">
             <AlertTriangle className="w-5 h-5 text-rose-500" />
             <span>Gestão Preditiva de Riscos de Pessoal</span>
           </h2>
           <p className="text-xs text-slate-400 font-medium mt-1">
-            Garantia de conformidade, coberturas linguísticas e análise de riscos geográficos por campus.
+            Análise baseada nos funcionários ativos e nos catálogos de zonas, turnos e idiomas carregados do Dataverse.
           </p>
         </div>
 
@@ -327,12 +396,17 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
             </h3>
 
             <div className="space-y-4">
+              {topRiscosAlerts.length === 0 && (
+                <div className="rounded-2xl border border-sky-100 bg-white p-5 text-sm font-medium text-slate-500">
+                  Não foram encontrados alertas com os dados atuais dos funcionários ativos.
+                </div>
+              )}
               {topRiscosAlerts.map((alert, idx) => {
                 const Icon = alert.icon;
                 return (
                   <div
                     key={alert.id}
-                    className={`p-5 bg-white rounded-[22px] border border-sky-100 shadow-[0_10px_26px_rgba(57,88,134,0.05)] hover:shadow-[0_16px_34px_rgba(57,88,134,0.10)] hover:-translate-y-0.5 transition-all duration-300 flex gap-4 ${
+                    className={`p-5 bg-white rounded-[22px] border border-sky-100 shadow-[0_10px_26px_rgba(0,48,87,0.05)] hover:shadow-[0_16px_34px_rgba(0,48,87,0.10)] hover:-translate-y-0.5 transition-all duration-300 flex gap-4 ${
                       alert.severity === "Crítico"
                         ? "border-l-4 border-l-rose-500"
                         : alert.severity === "Alto"
@@ -384,13 +458,18 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
 
           {/* Right Side */}
           <div className="space-y-6">
-            <div className="bg-white p-5 rounded-[22px] border border-sky-100 shadow-[0_10px_26px_rgba(57,88,134,0.05)] space-y-4">
+            <div className="bg-white p-5 rounded-[22px] border border-sky-100 shadow-[0_10px_26px_rgba(0,48,87,0.05)] space-y-4">
               <div>
                 <h4 className="text-xs font-black uppercase tracking-wider text-oxford">Contratos Críticos & Altos</h4>
                 <p className="text-[10px] text-slate-400 mt-0.5 font-semibold">Regularização contratual imediata</p>
               </div>
 
               <div className="space-y-2.5">
+                {contratosRiscoMaximo.length === 0 && (
+                  <p className="text-xs text-slate-400">
+                    Nenhum funcionário ativo está classificado com risco contratual alto ou crítico.
+                  </p>
+                )}
                 {contratosRiscoMaximo.slice(0, 4).map((emp) => {
                   const dias = calcularDiasRestantes(emp.dataTerminoReal);
                   return (
@@ -476,40 +555,53 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
               {/* MATRIX 1: Idioma x Turno */}
               {heatmapMode === "idioma_turno" && (
                 <div className="min-w-[600px] text-xs">
-                  <div className="grid grid-cols-4 border-b border-sky-100 pb-3 text-[10px] uppercase font-black text-slate-400 tracking-wider">
+                  {IDIOMAS.length === 0 || TURNOS.length === 0 ? (
+                    <p className="py-8 text-center text-sm font-medium text-slate-400">
+                      Não há idiomas ou turnos cadastrados para exibir nesta análise.
+                    </p>
+                  ) : <>
+                  <div className="grid border-b border-sky-100 pb-3 text-[10px] uppercase font-black text-slate-400 tracking-wider" style={{ gridTemplateColumns: `minmax(120px, 1fr) repeat(${TURNOS.length}, minmax(100px, 1fr))` }}>
                     <div>Idioma de Ensino</div>
-                    {TURNOS_DISPONIVEIS.map((t) => (
+                    {TURNOS.map((t) => (
                       <div key={t} className="text-center">{t}</div>
                     ))}
                   </div>
 
                   <div className="divide-y divide-sky-100">
                     {IDIOMAS.map((idioma) => (
-                      <div key={idioma} className="grid grid-cols-4 py-3.5 items-center">
+                      <div key={idioma} className="grid py-3.5 items-center" style={{ gridTemplateColumns: `minmax(120px, 1fr) repeat(${TURNOS.length}, minmax(100px, 1fr))` }}>
                         <div className="font-extrabold text-oxford">{idioma}</div>
-                        {TURNOS_DISPONIVEIS.map((turno) => {
+                        {TURNOS.map((turno) => {
                           const met = calcularMetricasCelula({ idioma, turno });
                           return (
                             <div key={turno} className="px-2">
-                              <div
+                              <button
+                                type="button"
                                 onClick={() => setSelectedCellInfo({ title: `${idioma} • ${turno}`, ...met })}
-                                className={`py-3 text-center rounded-xl cursor-pointer transition-all hover:scale-105 hover:shadow-sm font-extrabold text-xs ${getHeatmapColor(met.nivel)}`}
+                                aria-label={`${idioma}, ${turno}: ${met.activeCount} funcionários ativos`}
+                                className={`w-full py-3 text-center rounded-xl cursor-pointer transition-all hover:scale-105 hover:shadow-sm font-extrabold text-xs ${getHeatmapColor(met.nivel)}`}
                               >
-                                {met.activeCount} Act
-                              </div>
+                                {met.activeCount} ativos
+                              </button>
                             </div>
                           );
                         })}
                       </div>
                     ))}
                   </div>
+                  </>}
                 </div>
               )}
 
               {/* MATRIX 2: Idioma x Zona */}
               {heatmapMode === "idioma_zona" && (
                 <div className="min-w-[700px] text-xs">
-                  <div className="grid grid-cols-6 border-b border-sky-100 pb-3 text-[10px] uppercase font-black text-slate-400 tracking-wider">
+                  {IDIOMAS.length === 0 || ZONAS.length === 0 ? (
+                    <p className="py-8 text-center text-sm font-medium text-slate-400">
+                      Não há idiomas ou zonas cadastrados para exibir nesta análise.
+                    </p>
+                  ) : <>
+                  <div className="grid border-b border-sky-100 pb-3 text-[10px] uppercase font-black text-slate-400 tracking-wider" style={{ gridTemplateColumns: `minmax(120px, 1fr) repeat(${ZONAS.length}, minmax(100px, 1fr))` }}>
                     <div>Idioma de Ensino</div>
                     {ZONAS.map((z) => (
                       <div key={z} className="text-center">{z}</div>
@@ -518,57 +610,68 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
 
                   <div className="divide-y divide-sky-100">
                     {IDIOMAS.map((idioma) => (
-                      <div key={idioma} className="grid grid-cols-6 py-3.5 items-center">
+                      <div key={idioma} className="grid py-3.5 items-center" style={{ gridTemplateColumns: `minmax(120px, 1fr) repeat(${ZONAS.length}, minmax(100px, 1fr))` }}>
                         <div className="font-extrabold text-oxford">{idioma}</div>
                         {ZONAS.map((zona) => {
                           const met = calcularMetricasCelula({ idioma, zona });
                           return (
                             <div key={zona} className="px-1.5">
-                              <div
+                              <button
+                                type="button"
                                 onClick={() => setSelectedCellInfo({ title: `${idioma} • ${zona}`, ...met })}
-                                className={`py-3 text-center rounded-xl cursor-pointer transition-all hover:scale-105 hover:shadow-sm font-extrabold text-xs ${getHeatmapColor(met.nivel)}`}
+                                aria-label={`${idioma}, ${zona}: ${met.activeCount} funcionários ativos`}
+                                className={`w-full py-3 text-center rounded-xl cursor-pointer transition-all hover:scale-105 hover:shadow-sm font-extrabold text-xs ${getHeatmapColor(met.nivel)}`}
                               >
-                                {met.activeCount} Act
-                              </div>
+                                {met.activeCount} ativos
+                              </button>
                             </div>
                           );
                         })}
                       </div>
                     ))}
                   </div>
+                  </>}
                 </div>
               )}
 
               {/* MATRIX 3: Zona x Turno */}
               {heatmapMode === "zona_turno" && (
                 <div className="min-w-[600px] text-xs">
-                  <div className="grid grid-cols-4 border-b border-sky-100 pb-3 text-[10px] uppercase font-black text-slate-400 tracking-wider">
+                  {ZONAS.length === 0 || TURNOS.length === 0 ? (
+                    <p className="py-8 text-center text-sm font-medium text-slate-400">
+                      Não há zonas ou turnos cadastrados para exibir nesta análise.
+                    </p>
+                  ) : <>
+                  <div className="grid border-b border-sky-100 pb-3 text-[10px] uppercase font-black text-slate-400 tracking-wider" style={{ gridTemplateColumns: `minmax(120px, 1fr) repeat(${TURNOS.length}, minmax(100px, 1fr))` }}>
                     <div>Região / Campus</div>
-                    {TURNOS_DISPONIVEIS.map((t) => (
+                    {TURNOS.map((t) => (
                       <div key={t} className="text-center">{t}</div>
                     ))}
                   </div>
 
                   <div className="divide-y divide-sky-100">
                     {ZONAS.map((zona) => (
-                      <div key={zona} className="grid grid-cols-4 py-3.5 items-center">
+                      <div key={zona} className="grid py-3.5 items-center" style={{ gridTemplateColumns: `minmax(120px, 1fr) repeat(${TURNOS.length}, minmax(100px, 1fr))` }}>
                         <div className="font-extrabold text-oxford">{zona}</div>
-                        {TURNOS_DISPONIVEIS.map((turno) => {
+                        {TURNOS.map((turno) => {
                           const met = calcularMetricasCelula({ zona, turno });
                           return (
                             <div key={turno} className="px-2">
-                              <div
+                              <button
+                                type="button"
                                 onClick={() => setSelectedCellInfo({ title: `${zona} • ${turno}`, ...met })}
-                                className={`py-3 text-center rounded-xl cursor-pointer transition-all hover:scale-105 hover:shadow-sm font-extrabold text-xs ${getHeatmapColor(met.nivel)}`}
+                                aria-label={`${zona}, ${turno}: ${met.activeCount} funcionários ativos`}
+                                className={`w-full py-3 text-center rounded-xl cursor-pointer transition-all hover:scale-105 hover:shadow-sm font-extrabold text-xs ${getHeatmapColor(met.nivel)}`}
                               >
-                                {met.activeCount} Act
-                              </div>
+                                {met.activeCount} ativos
+                              </button>
                             </div>
                           );
                         })}
                       </div>
                     ))}
                   </div>
+                  </>}
                 </div>
               )}
 
@@ -584,10 +687,9 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
                     {MESES.map((mes) => {
-                      const res = obterAusenciasNoMes(mes.key);
-                      const isExceeded = res.count > 8;
+                    const res = obterAusenciasNoMes(mes.key);
                       
-                      let cardColor = "border-emerald-100 bg-emerald-50/30 text-emerald-800";
+                    let cardColor = "border-emerald-100 bg-emerald-50/30 text-emerald-800";
                       if (res.nivel === "Vermelho") cardColor = "border-red-200 bg-red-50/30 text-red-900";
                       if (res.nivel === "Laranja") cardColor = "border-orange-200 bg-orange-50/30 text-orange-900";
                       if (res.nivel === "Amarelo") cardColor = "border-amber-200 bg-amber-50/30 text-amber-900";
@@ -598,10 +700,14 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
                           onClick={() => setSelectedCellInfo({
                             title: `Previsão: ${mes.label}`,
                             activeCount: actives.length,
+                            ausenciasFuturas: res.count,
                             contratos30: 0,
                             contratos60: 0,
                             subsPendentes: 0,
-                             listaNomes: res.ausentesList
+                            funcionarios: [],
+                            nivel: res.nivel,
+                            recomendacao: res.recomendacao,
+                            listaNomes: res.ausentesList,
                           })}
                           className={`p-4 rounded-3xl border-2 cursor-pointer transition-all hover:scale-102 hover:shadow-sm ${cardColor}`}
                         >
@@ -633,6 +739,7 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
             {/* Legendas coloridas */}
             <div className="bg-slate-50 p-4 rounded-2xl flex items-center gap-4 flex-wrap text-[10px] font-black uppercase tracking-wider text-slate-500">
               <span className="shrink-0">Risco da Célula:</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-slate-100 border border-slate-300 block" /> Sem dados</span>
               <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-emerald-100 border border-emerald-300 block" /> Verde (Estável)</span>
               <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-sky-200 border border-sky-300 block" /> Azul (Monitoramento)</span>
               <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-amber-300 border border-amber-400 block" /> Amarelo (Atenção)</span>
@@ -652,7 +759,7 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
               {selectedCellInfo ? (
                 <div className="space-y-4 text-xs">
                   <div>
-                    <span className="text-[10px] uppercase font-black text-yinmn tracking-wider block">Coordenada Geográfica</span>
+                    <span className="text-[10px] uppercase font-black text-yinmn tracking-wider block">Combinação analisada</span>
                     <p className="text-sm font-black text-oxford mt-0.5">{selectedCellInfo.title}</p>
                   </div>
 
@@ -679,6 +786,24 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
                     </div>
                   </div>
 
+                  {selectedCellInfo.funcionarios.length > 0 && (
+                    <div className="space-y-1.5">
+                      <span className="text-[10px] uppercase font-black text-slate-400">
+                        Funcionários nesta combinação ({selectedCellInfo.funcionarios.length})
+                      </span>
+                      {selectedCellInfo.funcionarios.map((employee) => (
+                        <button
+                          key={employee.recordId}
+                          type="button"
+                          onClick={() => onSelectEmployee(employee)}
+                          className="block w-full rounded-lg border border-sky-100 bg-white px-3 py-2 text-left text-[11px] font-bold text-oxford hover:bg-sky-50"
+                        >
+                          {employee.nome}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Lista de nomes ausentes para Período x Ausências */}
                   {selectedCellInfo.listaNomes && selectedCellInfo.listaNomes.length > 0 && (
                     <div className="p-3 bg-red-50/20 border border-red-100/40 rounded-2xl space-y-1.5">
@@ -697,7 +822,9 @@ export const RisksPage: React.FC<RisksPageProps> = ({ employees, onSelectEmploye
                   <div className="space-y-1">
                     <span className="text-[10px] uppercase font-black text-slate-400">Nível de Risco Calculado</span>
                     <span className={`inline-block px-2.5 py-0.5 rounded-full text-[9px] font-black border uppercase ${
-                      selectedCellInfo.nivel === "Vermelho"
+                      selectedCellInfo.nivel === "Sem dados"
+                        ? "bg-slate-50 text-slate-500 border-slate-200"
+                        : selectedCellInfo.nivel === "Vermelho"
                         ? "bg-rose-50 text-rose-600 border-rose-200"
                         : selectedCellInfo.nivel === "Laranja"
                         ? "bg-orange-50 text-orange-600 border-orange-200"

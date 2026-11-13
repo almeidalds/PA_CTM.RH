@@ -15,7 +15,7 @@ interface SectionTabsProps {
 
 export const SectionTabs: React.FC<SectionTabsProps> = ({ items, activeId, onChange }) => {
   return (
-    <div className="rounded-[18px] border border-sky-100 bg-white p-1.5 shadow-[0_10px_26px_rgba(57,88,134,0.06)]">
+    <div className="rounded-[18px] border border-sky-100 bg-white p-1.5 shadow-[0_10px_26px_rgba(0,48,87,0.06)]">
       <div className="flex gap-1 overflow-x-auto no-scrollbar" role="tablist">
         {items.map((item) => {
           const isActive = activeId === item.id;
