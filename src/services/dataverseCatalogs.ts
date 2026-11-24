@@ -379,7 +379,7 @@ export async function carregarCatalogosDataverse():
     listarCargosDataverse(),
     listarZonasDataverse(),
     listarTurnosDataverse(),
-    listarIdiomasDataverse(),
+    garantirIdiomaPortuguesDataverse(),
   ]);
 
   return {
@@ -419,6 +419,52 @@ function gerarCodigoCatalogo(nome: string, usados: Set<string>) {
   }
   usados.add(normalizarCatalogo(codigo));
   return codigo;
+}
+
+let idiomaPortuguesEmGarantia: Promise<CatalogoItem[]> | null = null;
+
+async function garantirIdiomaPortuguesDataverse(): Promise<CatalogoItem[]> {
+  if (idiomaPortuguesEmGarantia) return idiomaPortuguesEmGarantia;
+
+  idiomaPortuguesEmGarantia = (async () => {
+    const idiomas = await listarIdiomasDataverse();
+    const portugues = idiomas.find(
+      (idioma) => normalizarCatalogo(idioma.nome) === normalizarCatalogo("Português"),
+    );
+
+    if (portugues?.ativo) return idiomas;
+
+    const resultado = portugues
+      ? await Ctmbrasi_rhlanguagesesService.update(portugues.id, {
+          ctmbrasi_active: true,
+          statecode: 0,
+          statuscode: 1,
+        })
+      : await Ctmbrasi_rhlanguagesesService.create({
+          ctmbrasi_languagecode: gerarCodigoCatalogo(
+            "Português",
+            new Set(idiomas.map((idioma) => normalizarCatalogo(idioma.codigo))),
+          ),
+          ctmbrasi_languagename: "Português",
+          ctmbrasi_active: true,
+          statecode: 0,
+          statuscode: 1,
+        });
+
+    if (!resultado.success) {
+      throw new Error(
+        `Não foi possível disponibilizar Português no catálogo: ${
+          resultado.error?.message || "erro retornado pelo Dataverse."
+        }`,
+      );
+    }
+
+    return listarIdiomasDataverse();
+  })().finally(() => {
+    idiomaPortuguesEmGarantia = null;
+  });
+
+  return idiomaPortuguesEmGarantia;
 }
 
 async function sincronizarCatalogo(

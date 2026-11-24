@@ -142,7 +142,7 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
             onChange={(e) => handleFilterChange("zona", e.target.value)}
             className="w-full text-xs px-3 py-2.5 rounded-xl border border-sky-100 focus:outline-none focus:ring-2 focus:ring-yinmn/20 focus:border-yinmn bg-white text-oxford font-semibold"
           >
-            <option value="">Todas as zonas</option>
+            <option value="">Todas</option>
             {zonas.map((z) => (
               <option key={z} value={z}>{z}</option>
             ))}
@@ -172,7 +172,7 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
             onChange={(e) => handleFilterChange("idioma", e.target.value)}
             className="w-full text-xs px-3 py-2.5 rounded-xl border border-sky-100 focus:outline-none focus:ring-2 focus:ring-yinmn/20 focus:border-yinmn bg-white text-oxford font-semibold"
           >
-            <option value="">Todos os idiomas</option>
+            <option value="">Todos</option>
             {idiomas.map((i) => (
               <option key={i} value={i}>{i}</option>
             ))}
@@ -187,7 +187,7 @@ export const FiltersBar: React.FC<FiltersBarProps> = ({
             onChange={(e) => handleFilterChange("status", e.target.value)}
             className="w-full text-xs px-3 py-2.5 rounded-xl border border-sky-100 focus:outline-none focus:ring-2 focus:ring-yinmn/20 focus:border-yinmn bg-white text-oxford font-semibold"
           >
-            <option value="">Todos os status</option>
+            <option value="">Todos</option>
             <option value="Ativo">Ativo</option>
             <option value="A começar">A começar</option>
             <option value="Encerrado">Encerrado</option>

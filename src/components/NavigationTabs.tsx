@@ -7,13 +7,14 @@ import churchLogo from "../../logo/church_jesus_christ_simplified_symbol.png";
 import {
   BarChart3, Users2, CalendarDays, Settings,
   X, PanelLeftClose, PanelLeftOpen,
-  FolderSync, UserRoundPlus, ShieldAlert, FileClock, Bell,
+  FolderSync, UserRoundPlus, ShieldAlert, FileClock, Bell, Languages,
 } from "lucide-react";
 
 export type TabId =
   | "dashboard"
   | "team"
   | "futureHires"
+  | "translations"
   | "schedule"
   | "risks"
   | "settings";
@@ -82,6 +83,7 @@ export const NavigationTabs: React.FC<NavigationTabsProps> = (props) => {
     { label: "Funcionários e cadastros", items: [
       { label: "Funcionários", icon: Users2, active: props.activeTab === "team" && props.teamSubTab === "list", action: navigate("team", () => props.setTeamSubTab("list")) },
       { label: "Contratações Futuras", icon: UserRoundPlus, active: props.activeTab === "futureHires", action: navigate("futureHires") },
+      { label: "Traduções", icon: Languages, active: props.activeTab === "translations", action: navigate("translations") },
     ] },
     { label: "Escalas e ausências", items: [
       { label: "Férias e ausências", icon: CalendarDays, count: props.criticalVacationCount, active: props.activeTab === "schedule" && props.scheduleSubTab === "vacations", action: navigate("schedule", () => props.setScheduleSubTab("vacations")) },

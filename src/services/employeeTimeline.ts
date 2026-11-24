@@ -1,4 +1,5 @@
 import { getContext } from "@microsoft/power-apps/app";
+import { getClient } from "@microsoft/power-apps/data";
 import type {
   Ctmbrasi_rhtimelineeventses,
   Ctmbrasi_rhtimelineeventsesBase,
@@ -6,6 +7,9 @@ import type {
 } from "../generated/models/Ctmbrasi_rhtimelineeventsesModel";
 import { Ctmbrasi_rhtimelineeventsesService } from "../generated/services/Ctmbrasi_rhtimelineeventsesService";
 import type { RhEmployee, TimelineEvent, TimelineEventCategory } from "../types/rh";
+import { dataSourcesInfo } from "../../.power/schemas/appschemas/dataSourcesInfo";
+
+const timelineClient = getClient(dataSourcesInfo);
 
 const categoryToDataverse: Record<TimelineEventCategory, Ctmbrasi_rhtimelineeventsesctmbrasi_eventcategory> = {
   Cadastro: 583150000,
@@ -36,7 +40,7 @@ const trackedFields: {
   { key: "idFuncionario", label: "ID funcional", category: "Cadastro" },
   { key: "globalId", label: "Global ID", category: "Cadastro" },
   { key: "genero", label: "Gênero", category: "Cadastro" },
-  { key: "iniciaisFuncionario", label: "Iniciais", category: "Cadastro" },
+  { key: "nomePlaqueta", label: "Nome da Plaqueta", category: "Cadastro" },
   { key: "emailBYU", label: "E-mail BYU", category: "Cadastro" },
   { key: "emailPessoal", label: "E-mail pessoal", category: "Cadastro" },
   { key: "statusDataverse", label: "Status do funcionário", category: "Cadastro" },
@@ -174,6 +178,34 @@ export async function adicionarObservacaoHistorico(
 
   const actor = await obterResponsavelAtual();
   await criarEvento(employeeId, category, "Observação", trimmedText, actor);
+}
+
+export async function excluirObservacaoHistorico(eventId: string): Promise<void> {
+  if (!eventId.trim()) {
+    throw new Error("O identificador da observação é obrigatório.");
+  }
+
+  const recordResult = await Ctmbrasi_rhtimelineeventsesService.get(eventId, {
+    select: ["ctmbrasi_eventtype"],
+  });
+  if (!recordResult.success || !recordResult.data) {
+    throw new Error(
+      recordResult.error?.message || "Não foi possível localizar a observação para exclusão."
+    );
+  }
+  if (recordResult.data.ctmbrasi_eventtype?.trim() !== "Observação") {
+    throw new Error("Somente observações criadas manualmente podem ser excluídas.");
+  }
+
+  const deleteResult = await timelineClient.deleteRecordAsync(
+    "ctmbrasi_rhtimelineeventses",
+    eventId,
+  );
+  if (!deleteResult.success) {
+    throw new Error(
+      deleteResult.error?.message || "Não foi possível excluir a observação do histórico."
+    );
+  }
 }
 
 function formatarValor(field: keyof RhEmployee, value: unknown): string {

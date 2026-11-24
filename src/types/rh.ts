@@ -28,7 +28,9 @@ export type RhEmployee = {
   statusFuncionario: string; // "Ativo" | "Encerrado" | "A começar"
   globalId?: string;
   genero?: Ctmbrasi_employeerecordsesctmbrasi_gender;
-  iniciaisFuncionario?: string;
+  nomePlaqueta?: string;
+  fotoUrl?: string;
+  fotoTimestamp?: number;
   emailBYU?: string;
   emailPessoal?: string;
   statusDataverse?: Ctmbrasi_employeerecordsesctmbrasi_employeestatus;

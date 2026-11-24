@@ -28,6 +28,7 @@ import { formatarDataBR, calcularDiasRestantes } from "../utils/dateUtils";
 import { calcularRisco, identificarPendencias } from "../utils/riskUtils";
 import { StatusBadge } from "./StatusBadge";
 import { RiskBadge } from "./RiskBadge";
+import FuncionarioAvatar from "./FuncionarioAvatar";
 
 // Click Outside Hook
 function useClickOutside(ref: React.RefObject<HTMLDivElement>, callback: () => void) {
@@ -65,6 +66,7 @@ export const EmployeeSummaryCard: React.FC<EmployeeSummaryCardProps> = ({
   const risk = calcularRisco(employee);
   const pendencias = identificarPendencias(employee);
   const dias = calcularDiasRestantes(employee.dataTerminoReal);
+  const nomePlaqueta = employee.nomePlaqueta?.trim() || employee.nome;
 
   const isCritical = risk === "Crítico";
   const hasCriticalIssues = pendencias.some((p) => p.severity === "Crítica");
@@ -85,13 +87,25 @@ export const EmployeeSummaryCard: React.FC<EmployeeSummaryCardProps> = ({
       {/* Crucial Info 1: Header (Nome & Cargo) */}
       <div className="space-y-1">
         <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h4 className="text-sm font-extrabold text-oxford truncate" title={employee.nome}>
-              {employee.nome}
+          <div className="min-w-0 flex-1">
+            <h4 className="truncate text-base font-extrabold text-oxford" title={nomePlaqueta}>
+              {nomePlaqueta}
             </h4>
             <p className="text-[10px] text-slate-400 font-bold">{employee.cargo || "Não definido"}</p>
+            <p className="truncate text-[10px] text-slate-500" title={employee.nome || "Não informado"}>
+              Nome completo: {employee.nome || "Não informado"}
+            </p>
+            <div className="mt-1">
+              <StatusBadge status={employee.statusFuncionario} />
+            </div>
           </div>
-          <StatusBadge status={employee.statusFuncionario} />
+          <FuncionarioAvatar
+            funcionarioId={employee.recordId}
+            nome={nomePlaqueta}
+            size="card"
+            fotoUrl={employee.fotoUrl}
+            fotoTimestamp={employee.fotoTimestamp}
+          />
         </div>
       </div>
 

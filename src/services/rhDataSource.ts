@@ -377,8 +377,14 @@ export async function carregarFuncionarios(): Promise<
 
         genero: funcionario.ctmbrasi_gender,
 
-        iniciaisFuncionario:
+        nomePlaqueta:
           funcionario.ctmbrasi_employeeinitials || "",
+
+        fotoUrl:
+          funcionario.ctmbrasi_fotodofuncionario_url || "",
+
+        fotoTimestamp:
+          funcionario.ctmbrasi_fotodofuncionario_timestamp,
 
         emailBYU:
           funcionario.ctmbrasi_byuemail || "",
@@ -746,11 +752,11 @@ export async function salvarEdicaoFuncionario(
   }
 
   if (
-    novo.iniciaisFuncionario !==
-    anterior.iniciaisFuncionario
+    novo.nomePlaqueta !==
+    anterior.nomePlaqueta
   ) {
     campos.ctmbrasi_employeeinitials =
-      novo.iniciaisFuncionario ?? "";
+      novo.nomePlaqueta ?? "";
   }
 
   if (novo.emailBYU !== anterior.emailBYU) {
@@ -1249,9 +1255,9 @@ async function criarFuncionarioNoDataverse(
     novoFuncionario.ctmbrasi_gender = dados.genero;
   }
 
-  if (dados.iniciaisFuncionario?.trim()) {
+  if (dados.nomePlaqueta?.trim()) {
     novoFuncionario.ctmbrasi_employeeinitials =
-      dados.iniciaisFuncionario.trim();
+      dados.nomePlaqueta.trim();
   }
 
   if (dados.emailBYU?.trim()) {

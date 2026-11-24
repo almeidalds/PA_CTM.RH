@@ -37,6 +37,8 @@ const CAMPOS_FUNCIONARIO = [
 "ctmbrasi_terminationdate",
 "ctmbrasi_gender",
 "ctmbrasi_employeeinitials",
+"ctmbrasi_fotodofuncionario_url",
+"ctmbrasi_fotodofuncionario_timestamp",
 "ctmbrasi_employeestatus",
 "ctmbrasi_temple",
 "statecode",

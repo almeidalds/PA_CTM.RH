@@ -159,16 +159,31 @@ export const EmployeesPage: React.FC<EmployeesPageProps> = ({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredEmployees.map((emp) => (
-            <EmployeeSummaryCard
-              key={emp.recordId}
-              employee={emp}
-              onSelect={onSelectEmployee}
-              onEdit={onEditEmployee}
-            />
-          ))}
-        </div>
+        <section className="overflow-hidden rounded-[22px] border border-sky-100 bg-white shadow-[0_12px_30px_rgba(0,48,87,0.05)]">
+          <div
+            className="max-h-[480px] overflow-auto overscroll-contain p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-jordy"
+            style={{ scrollbarGutter: "stable" }}
+            tabIndex={0}
+            aria-label="Lista rolável de funcionários"
+          >
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {filteredEmployees.map((emp) => (
+                <EmployeeSummaryCard
+                  key={emp.recordId}
+                  employee={emp}
+                  onSelect={onSelectEmployee}
+                  onEdit={onEditEmployee}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-sky-100 bg-sky-50/40 px-4 py-3 text-[10px] font-semibold text-slate-500">
+            <span>{filteredEmployees.length} funcionários encontrados.</span>
+            {filteredEmployees.length > 6 && (
+              <span className="text-yinmn">Role dentro da lista para ver os demais.</span>
+            )}
+          </div>
+        </section>
       )}
       <PendingEditorPanel
         mode="create"

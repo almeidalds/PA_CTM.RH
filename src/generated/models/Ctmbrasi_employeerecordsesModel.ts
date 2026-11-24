@@ -34,6 +34,7 @@ export interface Ctmbrasi_employeerecordsesBase {
   ctmbrasi_employeeinitials?: string;
   ctmbrasi_employeerecordsid: string;
   ctmbrasi_employeestatus: Ctmbrasi_employeerecordsesctmbrasi_employeestatus;
+  ctmbrasi_fotodofuncionario?: string;
   ctmbrasi_fullname?: string;
   ctmbrasi_gender?: Ctmbrasi_employeerecordsesctmbrasi_gender;
   ctmbrasi_globalid?: string;
@@ -55,27 +56,18 @@ export interface Ctmbrasi_employeerecordsesBase {
 }
 
 export interface Ctmbrasi_employeerecordses extends Ctmbrasi_employeerecordsesBase {
-  createdbyname?: string;
-  createdbyyominame: string;
   createdon?: string;
-  createdonbehalfbyname?: string;
-  createdonbehalfbyyominame: string;
   ctmbrasi_employeestatusname?: string;
+  ctmbrasi_fotodofuncionario_timestamp?: number;
+  ctmbrasi_fotodofuncionario_url?: string;
+  ctmbrasi_fotodofuncionarioid?: string;
   ctmbrasi_gendername?: string;
   ctmbrasi_positionname?: string;
   ctmbrasi_shiftslookupname?: string;
   ctmbrasi_templename?: string;
   ctmbrasi_zonename?: string;
-  modifiedbyname?: string;
-  modifiedbyyominame: string;
   modifiedon?: string;
-  modifiedonbehalfbyname?: string;
-  modifiedonbehalfbyyominame: string;
   ownerid: string;
-  owneridname: string;
-  owneridtype: string;
-  owneridyominame: string;
-  owningbusinessunitname: string;
   statecodename?: string;
   statuscodename?: string;
   versionnumber?: number;
@@ -100,3 +92,6 @@ export interface Ctmbrasi_employeerecordses extends Ctmbrasi_employeerecordsesBa
   owninguser?: object;
   _owninguser_value?: string;
 }
+export type Ctmbrasi_employeerecordsesImageColumnName = 'ctmbrasi_fotodofuncionario';
+
+export type Ctmbrasi_employeerecordsesUploadColumnName = Ctmbrasi_employeerecordsesImageColumnName;

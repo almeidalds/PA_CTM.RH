@@ -17,6 +17,7 @@ export * as Ctmbrasi_rhsubstitutionsesModel from './models/Ctmbrasi_rhsubstituti
 export * as Ctmbrasi_rhtimelineeventsesModel from './models/Ctmbrasi_rhtimelineeventsesModel';
 export * as Ctmbrasi_rhvacationperiodsesModel from './models/Ctmbrasi_rhvacationperiodsesModel';
 export * as Ctmbrasi_rhzonesesModel from './models/Ctmbrasi_rhzonesesModel';
+export * as Imtcbra_rhtranslationcapabilitiesesModel from './models/Imtcbra_rhtranslationcapabilitiesesModel';
 export * as Office365UsersModel from './models/Office365UsersModel';
 export * as SystemusersModel from './models/SystemusersModel';
 
@@ -33,5 +34,6 @@ export * from './services/Ctmbrasi_rhsubstitutionsesService';
 export * from './services/Ctmbrasi_rhtimelineeventsesService';
 export * from './services/Ctmbrasi_rhvacationperiodsesService';
 export * from './services/Ctmbrasi_rhzonesesService';
+export * from './services/Imtcbra_rhtranslationcapabilitiesesService';
 export * from './services/Office365UsersService';
 export * from './services/SystemusersService';

@@ -114,6 +114,13 @@ export const dataSourcesInfo = {
     "dataSourceType": "Dataverse",
     "apis": {}
   },
+  "imtcbra_rhtranslationcapabilitieses": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "imtcbra_rhtranslationcapabilitiesid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
   "office365users": {
     "tableId": "",
     "version": "",

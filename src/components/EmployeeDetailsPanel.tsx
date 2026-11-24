@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { getContext } from "@microsoft/power-apps/app";
 import {
   X,
+  Camera,
   Mail,
   Copy,
   Check,
@@ -17,7 +18,6 @@ import {
   Clock,
   Globe2,
   FileEdit,
-  ClipboardCheck,
   Plus,
   FileText,
   Plane,
@@ -25,9 +25,10 @@ import {
   Settings,
   MapPin,
   BriefcaseBusiness,
+  Trash2,
   ExternalLink
 } from "lucide-react";
-import { RhEmployee, TimelineEvent, TimelineEventCategory } from "../types/rh";
+import { AppSettings, RhEmployee, TimelineEvent, TimelineEventCategory } from "../types/rh";
 import { formatarDataBR, calcularDiasRestantes } from "../utils/dateUtils";
 import { calcularRisco, identificarPendencias } from "../utils/riskUtils";
 import { calcularStatusFerias } from "../utils/vacationUtils";
@@ -35,28 +36,46 @@ import { StatusBadge } from "./StatusBadge";
 import { RiskBadge } from "./RiskBadge";
 import {
   adicionarObservacaoHistorico,
+  excluirObservacaoHistorico,
   obterHistoricoFuncionario,
 } from "../services/employeeTimeline";
 import {
   Ctmbrasi_employeerecordsesctmbrasi_employeestatus as employeeStatuses,
   Ctmbrasi_employeerecordsesctmbrasi_gender as genders,
 } from "../generated/models/Ctmbrasi_employeerecordsesModel";
+import { Ctmbrasi_employeerecordsesService } from "../generated/services/Ctmbrasi_employeerecordsesService";
+import FuncionarioAvatar, {
+  atualizarCacheFotoFuncionario,
+  EMPLOYEE_PHOTO_COLUMN,
+} from "./FuncionarioAvatar";
+import { PendingEditorPanel } from "./PendingEditorPanel";
+import { EmployeeTranslationSection } from "./EmployeeTranslationSection";
+
+const EMPLOYEE_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/bmp"]);
 
 interface EmployeeDetailsPanelProps {
   employee: RhEmployee | null;
+  appSettings: AppSettings;
   onClose: () => void;
-  onEdit: (employee: RhEmployee) => void;
+  onSave: (employee: RhEmployee) => Promise<void>;
   onConfigureVacation: (employee: RhEmployee) => void;
 }
 
 export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
   employee,
+  appSettings,
   onClose,
-  onEdit,
+  onSave,
   onConfigureVacation,
 }) => {
   const [copiedEmail, setCopiedEmail] = useState(false);
-  const [copiedSummary, setCopiedSummary] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState("");
+  const [photoVersion, setPhotoVersion] = useState(0);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const selectedEmployeeIdRef = useRef(employee?.recordId);
+  selectedEmployeeIdRef.current = employee?.recordId;
 
   // Timeline states
   const [events, setEvents] = useState<TimelineEvent[]>([]);
@@ -68,6 +87,30 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [timelineSaving, setTimelineSaving] = useState(false);
   const [timelineError, setTimelineError] = useState("");
+  const [confirmingObservationId, setConfirmingObservationId] = useState<string | null>(null);
+  const [deletingObservationId, setDeletingObservationId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!employee) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [employee]);
+
+  useEffect(() => {
+    if (!employee || isEditing) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [employee, isEditing, onClose]);
 
   useEffect(() => {
     let componenteAtivo = true;
@@ -150,6 +193,27 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
     }
   };
 
+  const handleDeleteObservation = async (eventId: string) => {
+    if (!employee) return;
+
+    setDeletingObservationId(eventId);
+    setTimelineError("");
+    try {
+      await excluirObservacaoHistorico(eventId);
+      setEvents((currentEvents) =>
+        currentEvents.filter((event) => event.recordId !== eventId)
+      );
+      setConfirmingObservationId(null);
+    } catch (error) {
+      console.error("Não foi possível excluir a observação do histórico:", error);
+      setTimelineError(
+        error instanceof Error ? error.message : "Não foi possível excluir a observação do histórico."
+      );
+    } finally {
+      setDeletingObservationId(null);
+    }
+  };
+
   if (!employee) return null;
 
 
@@ -159,13 +223,6 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
     .sort((left, right) => left.dataInicio.localeCompare(right.dataInicio));
   const pendencias = identificarPendencias(employee);
   const dias = calcularDiasRestantes(employee.dataTerminoReal);
-  const initials = employee.nome
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("");
 
   const contractProgress = (() => {
     const start = new Date(employee.dataAdmissao).getTime();
@@ -183,18 +240,18 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
         : "border-sky-200 bg-sky-50 text-cadet";
 
   const additionalDetails = [
-    { label: "Global ID", value: employee.globalId },
+    { label: "ID global", value: employee.globalId },
     {
-      label: "Gender",
+      label: "Gênero",
       value: employee.genero !== undefined
         ? genders[employee.genero] === "Male"
           ? "Masculino"
           : "Feminino"
         : "",
     },
-    { label: "Employee Initials", value: employee.iniciaisFuncionario },
+    { label: "Nome da Plaqueta", value: employee.nomePlaqueta },
     {
-      label: "Employee Status",
+      label: "Status no sistema",
       value: employee.statusDataverse !== undefined
         ? ({
             583150000: "Ativo",
@@ -206,7 +263,7 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
         : "",
     },
     {
-      label: "Temple",
+      label: "Templo",
       value: employee.templo === undefined
         ? ""
         : employee.templo
@@ -214,7 +271,7 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
           : "Não",
     },
     {
-      label: "Status (statecode)",
+      label: "Status do registro",
       value: employee.statusRegistro === undefined
         ? ""
         : employee.statusRegistro === 0
@@ -230,135 +287,240 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
     setTimeout(() => setCopiedEmail(false), 2000);
   };
 
-  const handleCopySummary = () => {
-    const resumo = `Nome: ${employee.nome}
-Cargo: ${employee.cargo || "Não definido"}
-Zona: ${employee.zona || "Não cadastrada"}
-Turno: ${employee.turno || "Não cadastrado"}
-Idiomas: ${employee.idiomas?.join(", ") || "Nenhum"}
-Status: ${employee.statusFuncionario}
-Término: ${formatarDataBR(employee.dataTerminoReal)}
-Risco: ${risk}`;
+  const handlePhotoSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!file || !employee) return;
 
-    navigator.clipboard.writeText(resumo);
-    setCopiedSummary(true);
-    setTimeout(() => setCopiedSummary(false), 2000);
+    if (!EMPLOYEE_PHOTO_TYPES.has(file.type)) {
+      setPhotoError("Selecione uma imagem JPEG, PNG, GIF ou BMP.");
+      return;
+    }
+
+    const employeeId = employee.recordId;
+    setPhotoError("");
+    setPhotoUploading(true);
+
+    try {
+      const result = await Ctmbrasi_employeerecordsesService.upload(
+        employeeId,
+        EMPLOYEE_PHOTO_COLUMN,
+        file,
+        file.name,
+      );
+      if (!result.success) {
+        throw new Error(result.error?.message || "Não foi possível salvar a foto no Dataverse.");
+      }
+
+      await atualizarCacheFotoFuncionario(employeeId, file);
+      if (selectedEmployeeIdRef.current === employeeId) {
+        setPhotoVersion((version) => version + 1);
+      }
+    } catch (error) {
+      console.error("Não foi possível salvar a foto do funcionário:", error);
+      if (selectedEmployeeIdRef.current === employeeId) {
+        setPhotoError(
+          error instanceof Error ? error.message : "Não foi possível salvar a foto no Dataverse."
+        );
+      }
+    } finally {
+      if (selectedEmployeeIdRef.current === employeeId) setPhotoUploading(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden flex justify-end" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
-      {/* Backdrop overlay */}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-2 sm:p-5"
+      role="presentation"
+    >
       <div
-          className="absolute inset-0 bg-sky-900/30 backdrop-blur-[3px] transition-opacity"
-        onClick={onClose}
+        aria-hidden="true"
+        className="absolute inset-0 bg-slate-950/35 backdrop-blur-[3px]"
+        onClick={() => {
+          if (!isEditing) onClose();
+        }}
       />
 
-      {/* Flyout panel */}
-      <div className="relative w-full max-w-xl bg-slate-50 h-full shadow-[0_0_70px_rgba(0,48,87,0.28)] flex flex-col z-10 transition-transform duration-300 translate-x-0 sm:rounded-l-[28px] overflow-hidden">
+      <section
+        className="relative z-10 flex max-h-[95dvh] w-full max-w-6xl flex-col overflow-hidden rounded-[24px] border border-white bg-slate-50 shadow-[0_28px_80px_rgba(0,48,87,0.24)] sm:max-h-[92dvh] sm:rounded-[34px]"
+        aria-labelledby={isEditing ? "editor-panel-title" : "employee-details-title"}
+        role="dialog"
+        aria-modal="true"
+      >
+        {isEditing ? (
+          <PendingEditorPanel
+            mode="edit"
+            embedded
+            employee={employee}
+            appSettings={appSettings}
+            onClose={() => setIsEditing(false)}
+            onSave={onSave}
+          />
+        ) : (
+          <>
         {/* Header */}
-        <div className="border-b border-sky-100 bg-white px-5 py-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-yinmn to-cadet text-sm font-bold text-white shadow-[0_8px_20px_rgba(0,97,132,0.24)]">
-                {initials || <User className="h-5 w-5" />}
-              </div>
-              <div className="min-w-0">
-                <span className="mb-0.5 block text-[9px] font-bold uppercase tracking-[0.16em] text-yinmn">Nome completo</span>
-                <h2 id="slide-over-title" className="max-w-[320px] truncate text-base font-bold tracking-tight text-oxford">
-                  {employee.nome}
-                </h2>
-                <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[10px] text-slate-400">
-                  <span>{employee.cargo || "Cargo não informado"}</span>
-                  <span aria-hidden="true">•</span>
-                  <span className="font-mono">
-                    Employee ID: {employee.idFuncionario || "Pendente"}
-                  </span>
-                </p>
-              </div>
-            </div>
+        <div className="relative shrink-0 overflow-hidden border-b border-slate-200 bg-white px-4 py-5 sm:px-7 sm:py-6">
+          <div aria-hidden="true" className="absolute -right-12 -top-24 h-52 w-[28rem] rounded-full bg-gradient-to-br from-sky-200/45 via-sky-50 to-transparent" />
           <button
+            type="button"
             onClick={onClose}
-            className="shrink-0 rounded-xl p-2 text-slate-400 transition-colors hover:bg-sky-50 hover:text-yinmn cursor-pointer"
+            className="absolute right-4 top-4 z-20 shrink-0 cursor-pointer rounded-full border border-transparent bg-white/80 p-2.5 text-slate-400 backdrop-blur-sm transition-colors hover:border-slate-200 hover:text-oxford sm:right-6 sm:top-5"
             aria-label="Fechar detalhes do funcionário"
           >
             <X className="h-4 w-4" />
           </button>
-          </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2 pl-[60px]">
-            <StatusBadge status={employee.statusFuncionario} />
-            <RiskBadge level={risk} />
-            {pendencias.length > 0 && (
-              <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[9px] font-bold text-amber-700">
-                {pendencias.length} {pendencias.length === 1 ? "pendência" : "pendências"}
-              </span>
-            )}
+          <div className="relative z-10 grid items-center gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(340px,430px)]">
+            <div className="flex min-w-0 items-center gap-4 pr-10">
+              <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
+                <FuncionarioAvatar
+                  key={`${employee.recordId}-${photoVersion}`}
+                  funcionarioId={employee.recordId}
+                  nome={employee.nome}
+                  fotoUrl={employee.fotoUrl}
+                  fotoTimestamp={employee.fotoTimestamp}
+                />
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  disabled={photoUploading}
+                  className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-yinmn text-white shadow-md transition-colors hover:bg-cadet disabled:cursor-wait disabled:opacity-70"
+                  title="Adicionar ou alterar foto"
+                  aria-label="Adicionar ou alterar foto do funcionário"
+                >
+                  {photoUploading
+                    ? <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    : <Camera className="h-3.5 w-3.5" />}
+                </button>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/bmp"
+                  className="sr-only"
+                  onChange={handlePhotoSelected}
+                  aria-label={`Selecionar foto de ${employee.nome}`}
+                />
+              </div>
+              <div className="min-w-0">
+                <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-yinmn">Perfil do funcionário</span>
+                <h2 id="employee-details-title" className="max-w-[min(68vw,640px)] truncate text-xl font-bold tracking-tight text-oxford sm:text-2xl">
+                  {employee.nome}
+                </h2>
+                <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-slate-500">
+                  <span>{employee.cargo || "Cargo não informado"}</span>
+                  <span aria-hidden="true">•</span>
+                  <span>
+                    ID: <strong className="font-semibold text-slate-600">{employee.idFuncionario || "Pendente"}</strong>
+                  </span>
+                </p>
+                <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                  <StatusBadge status={employee.statusFuncionario} />
+                  <RiskBadge level={risk} />
+                  {pendencias.length > 0 && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700">
+                      <AlertTriangle className="h-3 w-3" />
+                      {pendencias.length} {pendencias.length === 1 ? "pendência" : "pendências"}
+                    </span>
+                  )}
+                </div>
+                {photoError && (
+                  <p role="alert" className="mt-2 max-w-xl text-xs font-medium text-rose-600">
+                    {photoError}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="hidden grid-cols-2 gap-3 pr-10 lg:grid">
+              <div className="rounded-[20px] bg-sky-50 p-4">
+                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-yinmn shadow-sm">
+                  <Calendar className="h-4 w-4" />
+                </div>
+                <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">Prazo contratual</span>
+                <strong className="mt-1 block text-base text-oxford">
+                  {dias !== null && dias >= 0 ? `${dias} dias` : dias !== null ? "Encerrado" : "Não informado"}
+                </strong>
+              </div>
+
+              <div className="rounded-[20px] bg-sky-100/60 p-4">
+                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-yinmn shadow-sm">
+                  <Plane className="h-4 w-4" />
+                </div>
+                <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">Situação de férias</span>
+                <strong className="mt-1 block truncate text-base text-oxford" title={vacationStatus}>{vacationStatus}</strong>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5">
+        <div className="flex-1 space-y-5 overflow-y-auto bg-slate-50 p-4 sm:p-5 lg:p-6">
+          <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2 lg:gap-5">
 
           {/* Dados do Cargo e Turno */}
-          <div className="space-y-4">
-            <h3 className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">Informações</h3>
+          <div className="space-y-4 rounded-[24px] border border-white bg-white/95 p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
+            <h3 className="flex items-center gap-2 text-xs font-bold text-oxford">
+              <span className="h-4 w-1 rounded-full bg-jordy" />
+              Informações profissionais
+            </h3>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-              <div className="bg-white p-3.5 rounded-[16px] border border-sky-100 shadow-[0_8px_20px_rgba(0,48,87,0.04)]">
-                <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">
+              <div className="rounded-2xl border border-transparent bg-slate-50 p-4 transition-colors hover:border-sky-200 hover:bg-white">
+                <div className="mb-1.5 flex items-center gap-1.5 text-yinmn">
                   <BriefcaseBusiness className="w-3.5 h-3.5" />
-                  <span className="text-[10px] uppercase font-bold">Cargo</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Cargo</span>
                 </div>
-                <p className="text-xs font-bold text-oxford truncate">
+                <p className="truncate text-sm font-semibold text-oxford">
                   {employee.cargo || "Não definido"}
                 </p>
               </div>
 
-              <div className="bg-white p-3.5 rounded-[16px] border border-sky-100 shadow-[0_8px_20px_rgba(0,48,87,0.04)]">
-                <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">
+              <div className="rounded-2xl border border-transparent bg-slate-50 p-4 transition-colors hover:border-sky-200 hover:bg-white">
+                <div className="mb-1.5 flex items-center gap-1.5 text-yinmn">
                   <Clock className="w-3.5 h-3.5" />
-                  <span className="text-[10px] uppercase font-bold">Turno</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Turno</span>
                 </div>
-                <p className="text-xs font-bold text-oxford truncate">
+                <p className="truncate text-sm font-semibold text-oxford">
                   {employee.turno || "Não cadastrado"}
                 </p>
               </div>
 
-              <div className="bg-white p-3.5 rounded-[16px] border border-sky-100 shadow-[0_8px_20px_rgba(0,48,87,0.04)]">
-                <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">
+              <div className="rounded-2xl border border-transparent bg-slate-50 p-4 transition-colors hover:border-sky-200 hover:bg-white">
+                <div className="mb-1.5 flex items-center gap-1.5 text-yinmn">
                   <MapPin className="w-3.5 h-3.5" />
-                  <span className="text-[10px] uppercase font-bold">Zona</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Zona</span>
                 </div>
-                <p className="text-xs font-bold text-oxford truncate">
+                <p className="truncate text-sm font-semibold text-oxford">
                   {employee.zona || "Não cadastrada"}
                 </p>
               </div>
 
-              <div className="bg-white p-3.5 rounded-[16px] border border-sky-100 shadow-[0_8px_20px_rgba(0,48,87,0.04)]">
-                <div className="flex items-center gap-1.5 text-slate-400 mb-1.5">
+              <div className="rounded-2xl border border-transparent bg-slate-50 p-4 transition-colors hover:border-sky-200 hover:bg-white">
+                <div className="mb-1.5 flex items-center gap-1.5 text-yinmn">
                   <Globe2 className="w-3.5 h-3.5" />
-                  <span className="text-[10px] uppercase font-bold">Idiomas</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Idiomas</span>
                 </div>
-                <p className="text-xs font-bold text-oxford truncate" title={employee.idiomas?.join(", ") || "Nenhum"}>
+                <p className="truncate text-sm font-semibold text-oxford" title={employee.idiomas?.join(", ") || "Nenhum"}>
                   {employee.idiomas?.join(", ") || "Nenhum cadastrado"}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="space-y-3">
-            <h3 className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">
+          <div className="space-y-4 rounded-[24px] border border-white bg-white/95 p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
+            <h3 className="flex items-center gap-2 text-xs font-bold text-oxford">
+              <span className="h-4 w-1 rounded-full bg-jordy" />
               Dados adicionais
             </h3>
-            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
               {additionalDetails.map((detail) => (
                 <div
                   key={detail.label}
-                  className="min-w-0 rounded-[16px] border border-sky-100 bg-white p-3.5 shadow-[0_8px_20px_rgba(0,48,87,0.04)]"
+                  className="flex min-h-[78px] min-w-0 flex-col justify-between rounded-2xl border border-transparent bg-slate-50 p-4 transition-colors hover:border-sky-200 hover:bg-white"
                 >
-                  <span className="mb-1.5 block text-[10px] font-bold uppercase text-slate-400">
+                  <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
                     {detail.label}
                   </span>
-                  <p className="break-words text-xs font-bold text-oxford">
+                  <p className="break-words text-sm font-semibold text-oxford">
                     {detail.value || "Não informado"}
                   </p>
                 </div>
@@ -367,37 +529,40 @@ Risco: ${risk}`;
           </div>
 
           {/* Datas de Contrato */}
-          <div className="space-y-3">
-            <h3 className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">Informações Contratual</h3>
-            <div className="overflow-hidden rounded-[18px] border border-sky-100 bg-white shadow-[0_8px_20px_rgba(0,48,87,0.04)]">
-              <div className="grid grid-cols-2 divide-x divide-sky-100">
-                <div className="p-3.5">
-                  <div className="mb-1.5 flex items-center gap-1.5 text-slate-400">
-                    <Calendar className="h-3.5 w-3.5" />
-                    <span className="text-[9px] font-bold uppercase">Data de Admissão</span>
+          <div className="space-y-4 rounded-[24px] border border-white bg-white/95 p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
+            <h3 className="flex items-center gap-2 text-xs font-bold text-oxford">
+              <span className="h-4 w-1 rounded-full bg-jordy" />
+              Informações contratuais
+            </h3>
+            <div className="overflow-hidden rounded-[18px] bg-slate-50">
+              <div className="grid grid-cols-1 divide-y divide-white sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+                <div className="p-4">
+                  <div className="mb-1.5 flex items-center gap-1.5 text-yinmn">
+                    <Calendar className="h-4 w-4" />
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Data de admissão</span>
                   </div>
-                  <p className="text-xs font-semibold text-oxford">
+                  <p className="text-sm font-semibold text-oxford">
                     {formatarDataBR(employee.dataAdmissao)}
                   </p>
                 </div>
 
-                <div className="p-3.5">
-                  <div className="mb-1.5 flex items-center gap-1.5 text-slate-400">
-                    <Calendar className="h-3.5 w-3.5" />
-                    <span className="text-[9px] font-bold uppercase">Término de Contrato</span>
+                <div className="p-4">
+                  <div className="mb-1.5 flex items-center gap-1.5 text-yinmn">
+                    <Calendar className="h-4 w-4" />
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Término do contrato</span>
                   </div>
-                  <p className="text-xs font-semibold text-oxford">
+                  <p className="text-sm font-semibold text-oxford">
                     {formatarDataBR(employee.dataTerminoReal)}
                   </p>
                 </div>
               </div>
 
               {employee.statusFuncionario !== "Encerrado" && employee.dataTerminoReal && (
-                <div className="border-t border-sky-100 bg-sky-50/50 p-3.5">
+                <div className="border-t border-white bg-white/45 p-4">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div>
-                      <span className="block text-[9px] font-bold uppercase tracking-wide text-slate-400">Tempo restante</span>
-                      <span className="text-base font-bold text-oxford">
+                      <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">Tempo restante</span>
+                      <span className="text-lg font-bold text-oxford">
                         {dias !== null && dias >= 0 ? `${dias} dias` : "Prazo encerrado"}
                       </span>
                     </div>
@@ -411,11 +576,11 @@ Risco: ${risk}`;
                     aria-valuemin={0}
                     aria-valuemax={100}
                     aria-valuenow={contractProgress}
-                    className="h-1.5 overflow-hidden rounded-full bg-sky-100"
+                    className="h-2 overflow-hidden rounded-full bg-slate-200"
                   >
                     <div className="h-full rounded-full bg-gradient-to-r from-yinmn to-jordy" style={{ width: `${contractProgress}%` }} />
                   </div>
-                  <div className="mt-1.5 flex justify-between text-[8px] font-medium text-slate-400">
+                  <div className="mt-2 flex justify-between text-[9px] font-medium text-slate-500">
                     <span>Início</span>
                     <span>{contractProgress}% da vigência</span>
                     <span>Término</span>
@@ -426,32 +591,33 @@ Risco: ${risk}`;
           </div>
 
           {/* Ferias e ausencias */}
-          <div className="space-y-3">
+          <div className="space-y-4 rounded-[24px] border border-white bg-white/95 p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">
+              <h3 className="flex items-center gap-2 text-xs font-bold text-oxford">
+                <span className="h-4 w-1 rounded-full bg-jordy" />
                 {"F\u00e9rias e aus\u00eancias"}
               </h3>
               <button
                 type="button"
                 onClick={() => onConfigureVacation(employee)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-sky-100 bg-white px-3 py-2 text-[10px] font-bold text-yinmn transition hover:bg-sky-50"
+                className="inline-flex items-center gap-1.5 rounded-full border border-transparent bg-sky-50 px-3.5 py-2 text-[11px] font-bold text-yinmn transition hover:bg-sky-100"
               >
                 <FileEdit className="h-3.5 w-3.5" />
                 {"Configurar f\u00e9rias"}
               </button>
             </div>
 
-            <div className="overflow-hidden rounded-[18px] border border-sky-100 bg-white shadow-[0_8px_20px_rgba(0,48,87,0.04)]">
-              <div className="flex items-center justify-between gap-3 border-b border-sky-100 bg-sky-50/50 p-3.5">
+            <div className="overflow-hidden rounded-[18px] bg-slate-50">
+              <div className="flex items-center justify-between gap-3 border-b border-white bg-sky-50 p-4">
                 <div className="flex items-center gap-2.5">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-yinmn">
-                    <Plane className="h-4 w-4" />
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-yinmn shadow-sm">
+                    <Plane className="h-[18px] w-[18px]" />
                   </span>
                   <div>
-                    <span className="block text-[9px] font-bold uppercase text-slate-400">
+                    <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">
                       {"Situa\u00e7\u00e3o atual"}
                     </span>
-                    <strong className="text-xs text-oxford">{vacationStatus}</strong>
+                    <strong className="text-sm text-oxford">{vacationStatus}</strong>
                   </div>
                 </div>
                 {employee.diasVendidosFerias > 0 && (
@@ -461,9 +627,9 @@ Risco: ${risk}`;
                 )}
               </div>
 
-              <div className="space-y-2 p-3.5">
+              <div className="space-y-2 p-4">
                 {vacationPeriods.length > 0 ? vacationPeriods.map((period, index) => (
-                  <div key={period.recordId || `${period.dataInicio}-${index}`} className="flex items-center justify-between gap-3 rounded-xl border border-sky-50 bg-slate-50/70 p-3">
+                  <div key={period.recordId || `${period.dataInicio}-${index}`} className="flex items-center justify-between gap-3 rounded-xl bg-white/80 p-3">
                     <div className="flex min-w-0 items-center gap-2.5">
                       <Calendar className="h-3.5 w-3.5 shrink-0 text-yinmn" />
                       <div className="min-w-0">
@@ -477,8 +643,8 @@ Risco: ${risk}`;
                   </div>
                 )) : (
                   <div className="py-3 text-center">
-                    <p className="text-xs font-semibold text-slate-500">{"Nenhum per\u00edodo registrado."}</p>
-                    <p className="mt-1 text-[10px] text-slate-400">{"Use o bot\u00e3o acima para configurar as datas."}</p>
+                    <p className="text-sm font-semibold text-slate-600">{"Nenhum per\u00edodo registrado"}</p>
+                    <p className="mt-1 text-[11px] text-slate-500">{"Use o bot\u00e3o acima para configurar as datas."}</p>
                   </div>
                 )}
               </div>
@@ -486,25 +652,29 @@ Risco: ${risk}`;
           </div>
 
           {/* Contatos Corporativos */}
-          <div className="space-y-4">
-            <h3 className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">Contatos</h3>
+          <div className="space-y-4 rounded-[24px] border border-white bg-white/95 p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5 lg:col-span-2">
+            <h3 className="flex items-center gap-2 text-xs font-bold text-oxford">
+              <span className="h-4 w-1 rounded-full bg-jordy" />
+              Contatos
+            </h3>
             
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.25fr_1.5fr_1fr]">
               {/* E-mail */}
-              <div className="flex items-center justify-between rounded-[16px] border border-sky-100 bg-white p-3 shadow-[0_6px_16px_rgba(0,48,87,0.035)] transition-all hover:border-sky-200">
+              <div className="flex min-w-0 items-center justify-between rounded-2xl border border-transparent bg-slate-50 p-4 transition-colors hover:border-sky-200 hover:bg-white">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-yinmn">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-yinmn">
                     <Mail className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
-                    <span className="text-[9px] uppercase font-bold text-gray-400 block">Corporate Email</span>
-                    <p className="text-xs text-gray-700 truncate font-semibold">
+                    <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">E-mail corporativo</span>
+                    <p className="truncate text-sm font-semibold text-oxford">
                       {employee.emailCorporativo || "Não cadastrado"}
                     </p>
                   </div>
                 </div>
                 {employee.emailCorporativo && (
                   <button
+                    type="button"
                     onClick={handleCopyEmail}
                     className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-sky-50 hover:text-yinmn"
                     title="Copiar e-mail"
@@ -515,19 +685,19 @@ Risco: ${risk}`;
                 )}
               </div>
 
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {[
-                  { label: "BYU Email", value: employee.emailBYU },
-                  { label: "Personal Email", value: employee.emailPessoal },
+                  { label: "E-mail BYU", value: employee.emailBYU },
+                  { label: "E-mail pessoal", value: employee.emailPessoal },
                 ].map((contact) => (
                   <div
                     key={contact.label}
-                    className="min-w-0 rounded-[16px] border border-sky-100 bg-white p-3 shadow-[0_6px_16px_rgba(0,48,87,0.035)]"
+                    className="flex min-w-0 flex-col justify-center rounded-2xl border border-transparent bg-slate-50 p-4 transition-colors hover:border-sky-200 hover:bg-white"
                   >
-                    <span className="block text-[9px] font-bold uppercase text-slate-400">
+                    <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">
                       {contact.label}
                     </span>
-                    <p className="break-all text-xs font-semibold text-slate-700">
+                    <p className="mt-1 break-all text-sm font-semibold text-oxford">
                       {contact.value || "Não cadastrado"}
                     </p>
                   </div>
@@ -535,14 +705,14 @@ Risco: ${risk}`;
               </div>
 
               {/* Zoom Link */}
-              <div className="flex items-center justify-between rounded-[16px] border border-sky-100 bg-white p-3 shadow-[0_6px_16px_rgba(0,48,87,0.035)] transition-all hover:border-sky-200">
+              <div className="flex min-w-0 items-center justify-between rounded-2xl border border-transparent bg-slate-50 p-4 transition-colors hover:border-sky-200 hover:bg-white">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-900">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-yinmn">
                     <Video className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
-                    <span className="text-[9px] uppercase font-bold text-gray-400 block">Zoom Link</span>
-                    <p className="text-xs text-gray-700 truncate font-semibold">
+                    <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">Sala do Zoom</span>
+                    <p className="truncate text-sm font-semibold text-oxford">
                       {employee.linkZoom || "Não cadastrado"}
                     </p>
                   </div>
@@ -559,24 +729,28 @@ Risco: ${risk}`;
                     <ExternalLink className="h-4 w-4" />
                   </a>
                 ) : (
-                  <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">Não disponível</span>
+                  <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] text-slate-500">Não disponível</span>
                 )}
               </div>
             </div>
           </div>
 
+          </div>
+
+          <EmployeeTranslationSection employee={employee} />
+
           {/* Pendências identificadas */}
           {pendencias.length > 0 && (
-            <div className="p-4 rounded-xl bg-red-50 border border-red-100 space-y-2">
-              <div className="flex items-center gap-2 text-red-500">
-                <AlertTriangle className="w-4 h-4" />
-                <h4 className="text-xs font-black uppercase tracking-wider">Inconsistências Cadastrais ({pendencias.length})</h4>
+            <div className="space-y-2.5 rounded-[24px] border border-amber-200/70 bg-amber-50/80 p-4 sm:px-5">
+              <div className="flex items-center gap-2 text-amber-700">
+                <AlertTriangle className="h-4 w-4" />
+                <h4 className="text-xs font-bold">Pendências cadastrais ({pendencias.length})</h4>
               </div>
-              <ul className="space-y-1.5 pl-5 list-disc text-xs text-red-900">
+              <ul className="grid list-disc gap-1.5 pl-5 text-xs text-slate-700 sm:grid-cols-2">
                 {pendencias.map((p, i) => (
                   <li key={i}>
-                    <span className="font-bold">{p.label}</span>
-                    <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.2 rounded ml-1.5 font-bold uppercase">{p.severity}</span>
+                    <span className="font-semibold">{p.label}</span>
+                    <span className="ml-1.5 rounded bg-white/80 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-700">{p.severity}</span>
                   </li>
                 ))}
               </ul>
@@ -584,10 +758,11 @@ Risco: ${risk}`;
           )}
 
           {/* Seção Linha do Tempo */}
-          <div className="space-y-4 rounded-[18px] border border-sky-100 bg-white p-4 shadow-[0_8px_20px_rgba(0,48,87,0.04)]">
-            <div className="flex items-center justify-between">
-              <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-yinmn" />
+          <div className="space-y-4 rounded-[24px] border border-white bg-white/95 p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="flex items-center gap-2 text-xs font-bold text-oxford">
+                <span className="h-4 w-1 rounded-full bg-jordy" />
+                <Clock className="h-4 w-4 text-yinmn" />
                 <span>Histórico</span>
               </h3>
               
@@ -595,7 +770,7 @@ Risco: ${risk}`;
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="rounded-lg border border-sky-100 bg-sky-50 px-2 py-1.5 text-[9px] font-bold text-slate-500 focus:outline-none"
+                className="w-full rounded-full border border-transparent bg-slate-50 px-4 py-2 text-[11px] font-semibold text-slate-600 focus:outline-none sm:w-auto"
               >
                 <option value="all">Todas as categorias</option>
                 <option value="Cadastro">Cadastro</option>
@@ -609,7 +784,7 @@ Risco: ${risk}`;
             </div>
 
             {/* Linha do tempo visual */}
-            <div className="relative ml-2.5 space-y-3 border-l-2 border-sky-100 pb-1 pl-4 pt-1">
+            <div className="relative ml-2.5 space-y-3 border-l-2 border-slate-200 pb-1 pl-4 pt-1">
               {timelineLoading && (
                 <p className="text-xs text-slate-400 font-semibold">Carregando histórico do Dataverse...</p>
               )}
@@ -656,16 +831,60 @@ Risco: ${risk}`;
                   return (
                     <div key={evt.recordId} className="relative group">
                       {/* Timeline Dot */}
-                      <span className="absolute -left-[27px] top-1 flex items-center justify-center w-5 h-5 rounded-full bg-white border-2 border-sky-100 shadow-sm">
+                      <span className="absolute -left-[27px] top-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-slate-200 bg-white shadow-sm">
                         <span className={`w-2 h-2 rounded-full ${bulletBg}`} />
                       </span>
 
                       {/* Event Details */}
-                      <div className="space-y-1 rounded-xl border border-sky-100 bg-slate-50 p-3 text-xs transition-colors hover:border-sky-200">
-                        <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">
-                          <span>{formatarDataBR(evt.data)}</span>
-                          <span className={`uppercase text-[8px] font-black ${categoryColor}`}>{evt.categoria}</span>
+                      <div className="space-y-1.5 rounded-2xl border border-transparent bg-slate-50 p-3.5 text-xs transition-colors hover:border-sky-200 hover:bg-white">
+                        <div className="flex items-start justify-between gap-2 text-[10px] font-bold text-slate-400">
+                          <span className="shrink-0">{formatarDataBR(evt.data)}</span>
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className={`truncate text-right text-[8px] font-black uppercase ${categoryColor}`}>{evt.categoria}</span>
+                            {evt.tipo === "Observação" && (
+                              <button
+                                type="button"
+                                onClick={() => setConfirmingObservationId(
+                                  confirmingObservationId === evt.recordId ? null : evt.recordId
+                                )}
+                                disabled={deletingObservationId === evt.recordId}
+                                className="shrink-0 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                title="Excluir observação"
+                                aria-label="Excluir observação do histórico"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </div>
+                        {confirmingObservationId === evt.recordId && evt.tipo === "Observação" && (
+                          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2">
+                            <span className="text-[10px] font-semibold text-rose-800">
+                              Apagar esta observação?
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setConfirmingObservationId(null)}
+                                disabled={deletingObservationId === evt.recordId}
+                                className="rounded-lg px-2.5 py-1.5 text-[10px] font-bold text-slate-500 transition-colors hover:bg-white disabled:opacity-50"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void handleDeleteObservation(evt.recordId)}
+                                disabled={deletingObservationId === evt.recordId}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-2.5 py-1.5 text-[10px] font-bold text-white transition-colors hover:bg-rose-700 disabled:cursor-wait disabled:opacity-60"
+                              >
+                                {deletingObservationId === evt.recordId && (
+                                  <RefreshCw className="h-3 w-3 animate-spin" />
+                                )}
+                                Excluir
+                              </button>
+                            </div>
+                          </div>
+                        )}
                         <h4 className="text-xs font-black text-oxford flex items-center gap-1">
                           <Icon className="w-3.5 h-3.5 shrink-0" />
                           <span>{evt.tipo}</span>
@@ -694,28 +913,28 @@ Risco: ${risk}`;
             </div>
 
             {/* Formulário rápido para adicionar observação */}
-            <form onSubmit={handleAddObservation} className="space-y-2.5 rounded-xl border border-sky-100 bg-sky-50/60 p-3">
-              <span className="block text-[9px] font-black uppercase tracking-wide text-slate-400">Adicionar ao histórico</span>
+            <form onSubmit={handleAddObservation} className="space-y-2.5 rounded-[18px] border border-transparent bg-slate-50 p-4">
+              <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">Adicionar ao histórico</span>
               <p
                 className={`text-[10px] font-medium ${erroIdentificacaoUsuario ? "text-rose-600" : "text-slate-500"}`}
                 role={erroIdentificacaoUsuario ? "alert" : undefined}
               >
                 Responsável: {responsavelAtual || (erroIdentificacaoUsuario ? "Não foi possível identificar o usuário" : "Identificando usuário...")}
               </p>
-              <div className="grid grid-cols-[1fr_auto_auto] gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_140px_auto]">
                 <input
                   type="text"
                   placeholder="Escreva uma observação..."
                   value={newObs}
                   maxLength={850}
                   onChange={(e) => setNewObs(e.target.value)}
-                  className="min-w-0 text-xs bg-white border border-sky-100 rounded-lg px-3 py-2 focus:outline-none focus:border-jordy text-slate-700"
+                  className="min-w-0 rounded-xl border border-transparent bg-white px-3 py-2.5 text-xs text-slate-700 focus:border-jordy focus:outline-none"
                 />
                 
                 <select
                   value={newCategory}
                   onChange={(e) => setNewCategory(e.target.value as TimelineEventCategory)}
-                  className="max-w-[105px] text-[10px] font-bold text-slate-600 bg-white border border-sky-100 rounded-lg px-2 focus:outline-none"
+                  className="w-full rounded-xl border border-transparent bg-white px-2.5 py-2.5 text-[11px] font-bold text-slate-600 focus:outline-none"
                 >
                   <option value="Alteração administrativa">Admin</option>
                   <option value="Cadastro">Cadastro</option>
@@ -729,7 +948,7 @@ Risco: ${risk}`;
                 <button
                   type="submit"
                   disabled={!responsavelAtual || timelineSaving || !newObs.trim()}
-                  className="bg-yinmn hover:bg-cadet text-white font-bold p-2 rounded-lg transition-all disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex min-h-10 items-center justify-center rounded-xl bg-yinmn px-3 font-bold text-white transition-all hover:bg-cadet disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="Adicionar registro ao histórico"
                   title={!responsavelAtual ? "Aguardando identificação do usuário" : undefined}
                 >
@@ -742,35 +961,26 @@ Risco: ${risk}`;
         </div>
 
         {/* Footer Actions */}
-        <div className="flex flex-col gap-2 border-t border-sky-100 bg-white p-3 sm:flex-row">
-          {/* Copiar Resumo */}
+        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 bg-white p-3 sm:flex-row sm:justify-end sm:px-7 sm:py-4">
           <button
-            onClick={handleCopySummary}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-sky-100 bg-white px-4 py-2.5 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-sky-50 active:scale-[0.98]"
+            type="button"
+            onClick={onClose}
+            className="flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-2.5 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 hover:text-oxford"
           >
-            {copiedSummary ? (
-              <>
-                <Check className="w-4 h-4 text-emerald-600" />
-                <span className="text-emerald-600">Resumo copiado</span>
-              </>
-            ) : (
-              <>
-                <ClipboardCheck className="w-4 h-4" />
-                <span>Copiar resumo</span>
-              </>
-            )}
+            Fechar
           </button>
-
-          {/* Editar Cadastro */}
           <button
-            onClick={() => onEdit(employee)}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-yinmn px-4 py-2.5 text-[11px] font-bold text-white shadow-[0_8px_18px_rgba(0,97,132,0.22)] transition-all hover:bg-cadet active:scale-[0.98]"
+            type="button"
+            onClick={() => setIsEditing(true)}
+            className="flex items-center justify-center gap-2 rounded-full bg-yinmn px-6 py-2.5 text-xs font-bold text-white shadow-[0_8px_18px_rgba(0,97,132,0.2)] transition-all hover:bg-cadet active:scale-[0.98]"
           >
-            <FileEdit className="w-4 h-4" />
+            <FileEdit className="h-4 w-4" />
             <span>Editar cadastro</span>
           </button>
         </div>
-      </div>
+          </>
+        )}
+      </section>
     </div>
   );
 };

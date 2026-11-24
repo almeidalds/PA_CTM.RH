@@ -78,6 +78,11 @@
           "entitySetName": "Environment",
           "logicalName": "environment_39a902ba",
           "isHidden": false
+        },
+        "habilita__esdetradu__o": {
+          "entitySetName": "imtcbra_rhtranslationcapabilitieses",
+          "logicalName": "imtcbra_rhtranslationcapabilities",
+          "isHidden": false
         }
       },
       "environmentVariableName": ""

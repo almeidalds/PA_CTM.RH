@@ -25,6 +25,7 @@ import { ContractsPage } from "./pages/ContractsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AlertsPage } from "./pages/AlertsPage";
 import { FutureHiresPage } from "./pages/FutureHiresPage";
+import { TranslationsPage } from "./pages/TranslationsPage";
 
 import { SectionTabs } from "./components/SectionTabs";
 import { EmployeeDetailsPanel } from "./components/EmployeeDetailsPanel";
@@ -373,17 +374,6 @@ export default function App() {
     return savedSettings;
   };
 
-  // ========================================
-  // ABRIR EDIÇÃO
-  // ========================================
-
-  const handleDetailsEditShortcut = (
-    employee: RhEmployee
-  ) => {
-    setSelectedEmployee(null);
-    setEditingEmployee(employee);
-  };
-
   const handleConfigureVacation = (employee: RhEmployee) => {
     setSelectedEmployee(null);
     setVacationEmployee(employee);
@@ -437,6 +427,7 @@ export default function App() {
     dashboard: "Visão geral",
     team: "Funcionários e Cadastros",
     futureHires: "Contratações Futuras",
+    translations: "Traduções",
     schedule: "Escalas e ausências",
     risks: "Riscos e contratos",
     settings: "Configurações",
@@ -742,11 +733,11 @@ export default function App() {
                     items={[
                       {
                         id: "vacations",
-                        label: "Férias e ausências",
+                        label: "Férias",
                       },
                       {
                         id: "replacement",
-                        label: "Simular Reposições",
+                        label: "Reposições",
                       },
                     ]}
                   />
@@ -765,7 +756,6 @@ export default function App() {
                       languages={appSettings.idiomas}
                     />
                   )}
-
                 </div>
               )}
 
@@ -862,6 +852,13 @@ export default function App() {
                 <FutureHiresPage />
               )}
 
+              {activeTab === "translations" && (
+                <TranslationsPage
+                  employees={employees}
+                  onSelectEmployee={setSelectedEmployee}
+                />
+              )}
+
             </>
           )}
 
@@ -875,10 +872,11 @@ export default function App() {
 
       <EmployeeDetailsPanel
         employee={selectedEmployee}
+        appSettings={appSettings}
         onClose={() =>
           setSelectedEmployee(null)
         }
-        onEdit={handleDetailsEditShortcut}
+        onSave={handleSaveEmployee}
         onConfigureVacation={handleConfigureVacation}
       />
 

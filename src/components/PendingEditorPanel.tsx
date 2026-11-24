@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { X, Save, AlertTriangle, CheckCircle } from "lucide-react";
+import { X, Save, AlertTriangle, CheckCircle, User, IdCard } from "lucide-react";
 import { RhEmployee, AppSettings } from "../types/rh";
 import {
   Ctmbrasi_employeerecordsesctmbrasi_employeestatus as employeeStatuses,
@@ -43,6 +43,7 @@ const stateOptions = Object.entries(recordStatuses).map(([value, label]) => ({
 
 interface PendingEditorPanelProps {
   mode?: "create" | "edit";
+  embedded?: boolean;
   employee: RhEmployee | null;
   appSettings: AppSettings;
   onClose: () => void;
@@ -51,6 +52,7 @@ interface PendingEditorPanelProps {
 
 export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
   mode = "edit",
+  embedded = false,
   employee,
   appSettings,
   onClose,
@@ -76,7 +78,40 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
     }
   }, [employee]);
 
+  useEffect(() => {
+    if (!employee || embedded) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [employee, embedded]);
+
+  useEffect(() => {
+    if (!employee) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !saving) onClose();
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [employee, onClose, saving]);
+
   if (!employee || !formData) return null;
+
+  const initials = formData.nome
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+  const currentStatus = formData.statusDataverse !== undefined
+    ? employeeStatusLabels[formData.statusDataverse] || employeeStatuses[formData.statusDataverse]
+    : "Não definido";
 
   const handleChange = (field: keyof RhEmployee, value: any) => {
     setFormData((prev) => {
@@ -148,33 +183,81 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden flex justify-end" aria-labelledby="editor-panel-title" role="dialog" aria-modal="true">
-      {/* Backdrop overlay */}
-      <div
-        className="absolute inset-0 bg-slate-950/25 backdrop-blur-[2px] transition-opacity"
-        onClick={() => { if (!saving) onClose(); }}
-      />
+    <div
+      className={embedded
+        ? "flex min-h-0 flex-1 flex-col overflow-hidden"
+        : "fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-2 sm:p-5"}
+      role="presentation"
+    >
+      {!embedded && (
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-slate-950/35 backdrop-blur-[3px]"
+          onClick={() => { if (!saving) onClose(); }}
+        />
+      )}
 
-      {/* Flyout panel */}
-      <div className="relative w-full max-w-xl bg-slate-50 h-full shadow-[0_0_70px_rgba(0,48,87,0.28)] flex flex-col z-10 sm:rounded-l-[28px] overflow-hidden">
+      <section
+        className={embedded
+          ? "relative flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-50"
+          : "relative z-10 flex max-h-[95dvh] w-full max-w-6xl flex-col overflow-hidden rounded-[24px] border border-white bg-slate-50 shadow-[0_28px_80px_rgba(0,48,87,0.24)] sm:max-h-[92dvh] sm:rounded-[34px]"}
+        aria-labelledby="editor-panel-title"
+        role={embedded ? undefined : "dialog"}
+        aria-modal={embedded ? undefined : true}
+      >
         {/* Header */}
-        <div className="bg-gradient-to-r from-slate-100 to-white text-oxford px-6 py-5 flex items-center justify-between border-b border-white">
-          <div>
-            <span className="text-[10px] font-black uppercase tracking-[0.16em] text-yinmn block mb-1">{mode === "create" ? "Diretório de funcionários" : "Qualidade cadastral"}</span>
-            <h2 id="editor-panel-title" className="text-base font-extrabold tracking-tight text-oxford">
-              {mode === "create" ? "Novo funcionário" : "Corrigir / Editar Cadastro"}
-            </h2>
-          </div>
+        <div className="relative shrink-0 overflow-hidden border-b border-slate-200 bg-white px-4 py-5 sm:px-7 sm:py-6">
+          <div aria-hidden="true" className="absolute -right-12 -top-24 h-52 w-[28rem] rounded-full bg-gradient-to-br from-sky-200/45 via-sky-50 to-transparent" />
           <button
+            type="button"
+            disabled={saving}
             onClick={() => { if (!saving) onClose(); }}
-            className="p-2 rounded-lg text-slate-400 hover:text-yinmn hover:bg-sky-50 transition-colors cursor-pointer"
+            className="absolute right-4 top-4 z-20 cursor-pointer rounded-full border border-transparent bg-white/80 p-2.5 text-slate-400 backdrop-blur-sm transition-colors hover:border-slate-200 hover:text-oxford disabled:cursor-not-allowed disabled:opacity-50 sm:right-6 sm:top-5"
+            aria-label="Fechar editor de funcionário"
           >
-            <X className="w-5 h-5" />
+            <X className="h-4 w-4" />
           </button>
+
+          <div className="relative z-10 grid items-center gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(340px,430px)]">
+            <div className="flex min-w-0 items-center gap-4 pr-10">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-gradient-to-br from-yinmn to-cadet text-base font-bold text-white shadow-[0_10px_24px_rgba(0,97,132,0.2)] sm:h-16 sm:w-16 sm:rounded-[22px] sm:text-lg">
+                {initials || <User className="h-5 w-5" />}
+              </div>
+              <div className="min-w-0">
+                <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-yinmn">
+                  {mode === "create" ? "Novo funcionário" : "Editar cadastro"}
+                </span>
+                <h2 id="editor-panel-title" className="max-w-[min(68vw,640px)] truncate text-xl font-bold tracking-tight text-oxford sm:text-2xl">
+                  {formData.nome || "Funcionário sem nome"}
+                </h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  {mode === "create" ? "Preencha os dados para criar o cadastro." : "Revise e atualize as informações do funcionário."}
+                </p>
+              </div>
+            </div>
+
+            <div className="hidden grid-cols-2 gap-3 pr-10 lg:grid">
+              <div className="rounded-[20px] bg-sky-50 p-4">
+                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-yinmn shadow-sm">
+                  <IdCard className="h-4 w-4" />
+                </div>
+                <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">ID do funcionário</span>
+                <strong className="mt-1 block truncate text-base text-oxford">{formData.idFuncionario || "Pendente"}</strong>
+              </div>
+
+              <div className="rounded-[20px] bg-sky-100/60 p-4">
+                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-yinmn shadow-sm">
+                  <CheckCircle className="h-4 w-4" />
+                </div>
+                <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">Status atual</span>
+                <strong className="mt-1 block truncate text-base text-oxford">{currentStatus}</strong>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Content Body / Form */}
-        <form id="employee-editor-form" onSubmit={handleSave} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+        <form id="employee-editor-form" onSubmit={handleSave} className="flex-1 space-y-5 overflow-y-auto bg-slate-50 p-4 sm:p-5 lg:p-6">
           {/* Alertas */}
           {errorMessage && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-900 flex items-start gap-2">
@@ -190,11 +273,18 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
             </div>
           )}
 
-          <div className="space-y-4">
-            {/* Nome do funcionário */}
-            <div>
+          <div className="space-y-5">
+            <section className="space-y-4 rounded-[24px] border border-white bg-white/95 p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
+              <h3 className="flex items-center gap-2 text-xs font-bold text-oxford">
+                <span className="h-4 w-1 rounded-full bg-jordy" />
+                Identificação
+              </h3>
+
+              <div className="space-y-4">
+                {/* Nome do funcionário */}
+                <div>
               <label htmlFor="employee-full-name" className="block text-xs font-bold text-slate-500 mb-1.5">
-                Nome completo (Full Name) <span className="text-red-500">*</span>
+                Nome completo <span className="text-red-500">*</span>
               </label>
               <input
                 id="employee-full-name"
@@ -205,12 +295,12 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
                 className="w-full text-xs px-3.5 py-2.5 rounded-lg border border-sky-100 focus:outline-none focus:ring-2 focus:ring-yinmn/20 focus:border-yinmn text-oxford font-medium"
                 placeholder="Ex: Carlos Augusto de Souza"
               />
-            </div>
+                </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <label htmlFor="employee-id" className="mb-1.5 block text-xs font-bold text-slate-500">
-                  ID do funcionário (Employee ID) <span className="text-red-500">*</span>
+                  ID do funcionário <span className="text-red-500">*</span>
                 </label>
                 <input
                   id="employee-id"
@@ -226,7 +316,7 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
               </div>
               <div>
                 <label htmlFor="employee-global-id" className="mb-1.5 block text-xs font-bold text-slate-500">
-                  ID global (Global ID)
+                  ID global
                 </label>
                 <input
                   id="employee-global-id"
@@ -238,7 +328,7 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
               </div>
               <div>
                 <label htmlFor="employee-gender" className="mb-1.5 block text-xs font-bold text-slate-500">
-                  Gênero (Gender)
+                  Gênero
                 </label>
                 <select
                   id="employee-gender"
@@ -253,24 +343,32 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
                 </select>
               </div>
               <div>
-                <label htmlFor="employee-initials" className="mb-1.5 block text-xs font-bold text-slate-500">
-                  Iniciais do funcionário (Employee Initials)
+                <label htmlFor="employee-nameplate" className="mb-1.5 block text-xs font-bold text-slate-500">
+                  Nome da Plaqueta
                 </label>
                 <input
-                  id="employee-initials"
+                  id="employee-nameplate"
                   type="text"
-                  value={formData.iniciaisFuncionario || ""}
-                  onChange={(e) => handleChange("iniciaisFuncionario", e.target.value)}
+                  value={formData.nomePlaqueta || ""}
+                  onChange={(e) => handleChange("nomePlaqueta", e.target.value)}
                   className="w-full rounded-lg border border-sky-100 px-3.5 py-2.5 text-xs text-oxford focus:border-yinmn focus:outline-none focus:ring-2 focus:ring-yinmn/20"
                 />
               </div>
-            </div>
+                </div>
+              </div>
+            </section>
 
             {/* Grid Cargo, Zona e Turno */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <section className="space-y-4 rounded-[24px] border border-white bg-white/95 p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
+              <h3 className="flex items-center gap-2 text-xs font-bold text-oxford">
+                <span className="h-4 w-1 rounded-full bg-jordy" />
+                Trabalho e status
+              </h3>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {/* Cargo */}
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5">Cargo (Position)</label>
+                <label className="block text-xs font-bold text-slate-500 mb-1.5">Cargo</label>
                 <select
                   value={formData.cargo}
                   onChange={(e) => handleChange("cargo", e.target.value)}
@@ -285,7 +383,7 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
 
               {/* Turno */}
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5">Turno (Shifts - Lookup)</label>
+                <label className="block text-xs font-bold text-slate-500 mb-1.5">Turno</label>
                 <select
                   value={formData.turno}
                   onChange={(e) => handleChange("turno", e.target.value)}
@@ -303,7 +401,7 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
 
               {/* Zona */}
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5">Zona (Zone)</label>
+                <label className="block text-xs font-bold text-slate-500 mb-1.5">Zona</label>
                 <select
                   value={formData.zona}
                   onChange={(e) => handleChange("zona", e.target.value)}
@@ -318,7 +416,7 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
 
               <div>
                 <label htmlFor="employee-status" className="mb-1.5 block text-xs font-bold text-slate-500">
-                  Status do funcionário (Employee Status)
+                  Status do funcionário
                 </label>
                 <select
                   id="employee-status"
@@ -335,7 +433,7 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
               </div>
               <div>
                 <label htmlFor="record-status" className="mb-1.5 block text-xs font-bold text-slate-500">
-                  Status do registro (Status / statecode)
+                  Status do registro
                 </label>
                 <select
                   id="record-status"
@@ -351,7 +449,7 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
               </div>
               <div>
                 <label htmlFor="employee-temple" className="mb-1.5 block text-xs font-bold text-slate-500">
-                  Templo (Temple)
+                  Templo
                 </label>
                 <select
                   id="employee-temple"
@@ -366,12 +464,19 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
                   <option value="false">Não</option>
                 </select>
               </div>
-            </div>
+              </div>
+            </section>
 
             {/* Vigência / Término */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <section className="space-y-4 rounded-[24px] border border-white bg-white/95 p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
+              <h3 className="flex items-center gap-2 text-xs font-bold text-oxford">
+                <span className="h-4 w-1 rounded-full bg-jordy" />
+                Informações contratuais
+              </h3>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5">Data de admissão (Hire Date)</label>
+                <label className="block text-xs font-bold text-slate-500 mb-1.5">Data de admissão</label>
                 <input
                   type="date"
                   value={formData.dataAdmissao}
@@ -382,7 +487,7 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
 
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-1.5">
-                  Data de término do contrato (Contract End Date)
+                  Data de término do contrato
                 </label>
                 <input
                   type="date"
@@ -396,12 +501,19 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
                   <p className="text-[10px] text-red-600 mt-1">Obrigatório para previsão de cobertura.</p>
                 )}
               </div>
-            </div>
+              </div>
+            </section>
 
             {/* E-mails e Zoom */}
-            <div className="space-y-3.5">
+            <section className="space-y-4 rounded-[24px] border border-white bg-white/95 p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
+              <h3 className="flex items-center gap-2 text-xs font-bold text-oxford">
+                <span className="h-4 w-1 rounded-full bg-jordy" />
+                Contatos
+              </h3>
+
+              <div className="space-y-3.5">
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5">E-mail corporativo (Corporate Email)</label>
+                <label className="block text-xs font-bold text-slate-500 mb-1.5">E-mail corporativo</label>
                 <input
                   type="email"
                   value={formData.emailCorporativo}
@@ -414,7 +526,7 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
               <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                 <div>
                   <label htmlFor="employee-byu-email" className="mb-1.5 block text-xs font-bold text-slate-500">
-                    E-mail BYU (BYU Email)
+                    E-mail BYU
                   </label>
                   <input
                     id="employee-byu-email"
@@ -426,7 +538,7 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
                 </div>
                 <div>
                   <label htmlFor="employee-personal-email" className="mb-1.5 block text-xs font-bold text-slate-500">
-                    E-mail pessoal (Personal Email)
+                    E-mail pessoal
                   </label>
                   <input
                     id="employee-personal-email"
@@ -439,7 +551,7 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1.5">Link do Zoom (Zoom Link)</label>
+                <label className="block text-xs font-bold text-slate-500 mb-1.5">Link do Zoom</label>
                 <input
                   type="url"
                   value={formData.linkZoom}
@@ -448,21 +560,28 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
                   placeholder="Ex: https://zoom.us/j/..."
                 />
               </div>
-            </div>
+              </div>
+            </section>
 
             {/* Seleção de Idiomas */}
-            <div className="p-4 bg-white rounded-xl border border-sky-100">
-              <label className="block text-xs font-black uppercase tracking-[0.14em] text-slate-500 mb-2.5">
-                Idiomas ({formData.idiomas?.length || 0})
-              </label>
+            <section className="space-y-4 rounded-[24px] border border-white bg-white/95 p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="flex items-center gap-2 text-xs font-bold text-oxford">
+                  <span className="h-4 w-1 rounded-full bg-jordy" />
+                  Idiomas
+                </h3>
+                <span className="rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-bold text-yinmn">
+                  {formData.idiomas?.length || 0} selecionado(s)
+                </span>
+              </div>
               
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                 {popularLanguages.map((lang) => {
                   const isChecked = formData.idiomas?.includes(lang);
                   return (
                     <label
                       key={lang}
-                      className={`flex items-center gap-2 p-2 rounded-lg border text-xs font-semibold cursor-pointer transition-all select-none ${
+                      className={`flex cursor-pointer select-none items-center gap-2 rounded-xl border p-2.5 text-xs font-semibold transition-all ${
                         isChecked
                           ? "bg-sky-50 border-yinmn text-yinmn font-bold"
                           : "bg-white border-sky-100 text-slate-600 hover:bg-sky-50"
@@ -483,17 +602,17 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
               {(!formData.idiomas || formData.idiomas.length === 0) && (
                 <p className="text-[10px] text-amber-600 mt-2.5 font-bold">⚠️ É necessário associar ao menos um idioma ao instrutor ativo.</p>
               )}
-            </div>
+            </section>
           </div>
         </form>
 
         {/* Footer Actions */}
-        <div className="p-4 bg-white border-t border-sky-100 flex items-center justify-end gap-3">
+        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 bg-white p-3 sm:flex-row sm:justify-end sm:px-7 sm:py-4">
           <button
             type="button"
             disabled={saving}
             onClick={() => { if (!saving) onClose(); }}
-            className="text-xs bg-white hover:bg-sky-50 text-slate-600 font-bold py-2.5 px-5 rounded-lg border border-sky-100 transition-colors cursor-pointer"
+            className="flex cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-2.5 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 hover:text-oxford disabled:cursor-not-allowed disabled:opacity-50"
           >
             Cancelar
           </button>
@@ -502,13 +621,13 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
             form="employee-editor-form"
             type="submit"
             disabled={saving || success}
-            className="text-xs bg-yinmn hover:bg-cadet text-white font-extrabold py-2.5 px-6 rounded-xl flex items-center gap-2 transition-all shadow-md shadow-yinmn/10 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+            className="flex cursor-pointer items-center justify-center gap-2 rounded-full bg-yinmn px-6 py-2.5 text-xs font-bold text-white shadow-[0_8px_18px_rgba(0,97,132,0.2)] transition-all hover:bg-cadet active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
             <span>{saving ? "Salvando..." : mode === "create" ? "Cadastrar funcionário" : "Salvar Alterações"}</span>
           </button>
         </div>
-      </div>
+      </section>
     </div>
   );
 };

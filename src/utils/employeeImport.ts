@@ -313,6 +313,14 @@ export async function previewEmployeeImport(
 
     employee.idFuncionario = idFuncionario;
     employee.nome = nome;
+    employee.nomePlaqueta = getText(
+      get(
+        source,
+        "Nome de Plaqueta",
+        "Nome da Plaqueta",
+        "Employee Initials",
+      ),
+    );
     employee.globalId = getText(get(source, "ID Global", "Global ID"));
     employee.dataAdmissao = dataAdmissao;
     employee.emailCorporativo = getText(
