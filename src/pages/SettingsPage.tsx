@@ -19,6 +19,7 @@ import {
   EmployeeImportCard,
 } from "../components/EmployeeImportCard";
 import { ShiftSettingsCard } from "../components/ShiftSettingsCard";
+import { TeachingModalitySettingsCard } from "../components/TeachingModalitySettingsCard";
 import type {
   EmployeeImportResult,
   EmployeeImportRow,
@@ -242,6 +243,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         />
 
         <ShiftSettingsCard shifts={shifts} onSave={onSaveShifts} />
+
+        <TeachingModalitySettingsCard />
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 sm:gap-5">
           {renderList(

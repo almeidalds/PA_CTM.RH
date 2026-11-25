@@ -389,6 +389,14 @@
           "x-ms-schema-name": "ctmbrasi_ZoomLink",
           "maxLength": 100
         },
+        "imtcbra_telefone": {
+          "type": "string",
+          "title": "Telefone",
+          "x-ms-dataverse-attribute": "imtcbra_telefone",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "imtcbra_Telefone",
+          "maxLength": 100
+        },
         "importsequencenumber": {
           "type": "string",
           "title": "Import Sequence Number",

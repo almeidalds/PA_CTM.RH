@@ -43,6 +43,7 @@ const CAMPOS_FUNCIONARIO = [
 "ctmbrasi_temple",
 "statecode",
 "ctmbrasi_zoomlink",
+"imtcbra_telefone",
 "ctmbrasi_shift",
 "_ctmbrasi_position_value",
 "_ctmbrasi_zone_value",

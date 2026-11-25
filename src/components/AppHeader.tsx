@@ -6,8 +6,8 @@
 
 import React, { useEffect, useState } from "react";
 import { ChevronDown, Menu, PanelLeft, RefreshCw, UserRound } from "lucide-react";
-import { getContext } from "@microsoft/power-apps/app";
 import { Office365UsersService } from "../generated/services/Office365UsersService";
+import { getCurrentUserIdentity } from "../services/currentUser";
 
 // ==========================================
 // INTERFACES
@@ -70,14 +70,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       let usuarioPrincipal = "";
 
       try {
-        // Obtém a identidade do usuário autenticado
-        // no ambiente do Power Apps.
-        const contexto = await getContext();
+        const identidade = await getCurrentUserIdentity();
 
         if (!componenteAtivo) return;
 
-        const nome = contexto.user.fullName || "";
-        const email = contexto.user.userPrincipalName || "";
+        const nome = identidade.displayName;
+        const email = identidade.email;
 
         usuarioPrincipal = email;
 

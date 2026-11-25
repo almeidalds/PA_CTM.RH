@@ -83,6 +83,16 @@
           "entitySetName": "imtcbra_rhtranslationcapabilitieses",
           "logicalName": "imtcbra_rhtranslationcapabilities",
           "isHidden": false
+        },
+        "modalidadesdeensinos": {
+          "entitySetName": "imtcbra_rhteachingmodalitieses",
+          "logicalName": "imtcbra_rhteachingmodalities",
+          "isHidden": false
+        },
+        "habilita__esdeensinos": {
+          "entitySetName": "imtcbra_rhteachingqualificationses",
+          "logicalName": "imtcbra_rhteachingqualifications",
+          "isHidden": false
         }
       },
       "environmentVariableName": ""

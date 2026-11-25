@@ -551,6 +551,20 @@ export const PendingEditorPanel: React.FC<PendingEditorPanelProps> = ({
               </div>
 
               <div>
+                <label htmlFor="employee-phone" className="mb-1.5 block text-xs font-bold text-slate-500">
+                  Telefone celular
+                </label>
+                <input
+                  id="employee-phone"
+                  type="tel"
+                  value={formData.telefone || ""}
+                  onChange={(e) => handleChange("telefone", e.target.value)}
+                  className="w-full rounded-lg border border-sky-100 px-3.5 py-2.5 text-xs text-oxford focus:border-yinmn focus:outline-none focus:ring-2 focus:ring-yinmn/20"
+                  placeholder="Ex: (11) 99999-9999"
+                />
+              </div>
+
+              <div>
                 <label className="block text-xs font-bold text-slate-500 mb-1.5">Link do Zoom</label>
                 <input
                   type="url"

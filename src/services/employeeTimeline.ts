@@ -1,4 +1,3 @@
-import { getContext } from "@microsoft/power-apps/app";
 import { getClient } from "@microsoft/power-apps/data";
 import type {
   Ctmbrasi_rhtimelineeventses,
@@ -8,6 +7,7 @@ import type {
 import { Ctmbrasi_rhtimelineeventsesService } from "../generated/services/Ctmbrasi_rhtimelineeventsesService";
 import type { RhEmployee, TimelineEvent, TimelineEventCategory } from "../types/rh";
 import { dataSourcesInfo } from "../../.power/schemas/appschemas/dataSourcesInfo";
+import { getCurrentUserDisplayName } from "./currentUser";
 
 const timelineClient = getClient(dataSourcesInfo);
 
@@ -43,6 +43,7 @@ const trackedFields: {
   { key: "nomePlaqueta", label: "Nome da Plaqueta", category: "Cadastro" },
   { key: "emailBYU", label: "E-mail BYU", category: "Cadastro" },
   { key: "emailPessoal", label: "E-mail pessoal", category: "Cadastro" },
+  { key: "telefone", label: "Telefone celular", category: "Cadastro" },
   { key: "statusDataverse", label: "Status do funcionário", category: "Cadastro" },
   { key: "statusRegistro", label: "Status do registro", category: "Cadastro" },
   { key: "templo", label: "Designação no templo", category: "Cadastro" },
@@ -63,14 +64,7 @@ function nomeResponsavel(actor: string): string {
 }
 
 async function obterResponsavelAtual(): Promise<string> {
-  const context = await getContext();
-  const name = context.user.fullName?.trim()
-    || context.user.userPrincipalName?.trim();
-
-  if (!name) {
-    throw new Error("O contexto do Power Apps não informou o usuário autenticado.");
-  }
-
+  const name = await getCurrentUserDisplayName();
   return nomeResponsavel(name);
 }
 

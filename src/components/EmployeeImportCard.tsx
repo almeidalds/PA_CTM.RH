@@ -114,7 +114,7 @@ export const EmployeeImportCard: React.FC<EmployeeImportCardProps> = ({
       </div>
 
       <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-600">
-        Colunas reconhecidas: matrícula, ID global, nome, e-mails, data de
+        Colunas reconhecidas: matrícula, ID global, nome, e-mails, telefone, data de
         admissão, término do contrato, sexo, cargo, zona, turno, Zoom e idiomas.
         Registros existentes e valores que não correspondam aos catálogos ativos
         serão separados para revisão. Nenhum registro existente será atualizado.

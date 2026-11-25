@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { getContext } from "@microsoft/power-apps/app";
 import type { IGetAllOptions } from "../generated/models/CommonModels";
 import type {
   Ctmbrasi_rhcontratacoesfuturases,
   Ctmbrasi_rhcontratacoesfuturasesBase,
 } from "../generated/models/Ctmbrasi_rhcontratacoesfuturasesModel";
+import { getCurrentUserDisplayName } from "./currentUser";
 import {
   Ctmbrasi_rhcontratacoesfuturasesctmbrasi_fase,
   Ctmbrasi_rhcontratacoesfuturasesctmbrasi_statusdeconfirmacao,
@@ -340,15 +340,7 @@ function appendHistory(
 }
 
 export async function obterResponsavelAtual(): Promise<string> {
-  const context = await getContext();
-  const actor =
-    context.user.fullName?.trim() ||
-    context.user.userPrincipalName?.trim();
-  if (!actor) {
-    throw new Error(
-      "O Power Apps não informou o usuário responsável pela alteração.",
-    );
-  }
+  const actor = await getCurrentUserDisplayName();
   return actor.replace(/[\r\n|]/g, " ");
 }
 

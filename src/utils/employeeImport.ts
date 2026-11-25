@@ -316,6 +316,7 @@ export async function previewEmployeeImport(
     employee.nomePlaqueta = getText(
       get(
         source,
+        "Funcionário",
         "Nome de Plaqueta",
         "Nome da Plaqueta",
         "Employee Initials",
@@ -326,8 +327,14 @@ export async function previewEmployeeImport(
     employee.emailCorporativo = getText(
       get(source, "E-mail Corporativo", "Corporate Email"),
     );
+    employee.emailBYU = getText(
+      get(source, "E-mail TRAIN", "E-mail BYU", "BYU Email"),
+    );
     employee.emailPessoal = getText(
       get(source, "E-mail Pessoal", "Personal Email"),
+    );
+    employee.telefone = getText(
+      get(source, "Tel Celular", "Telefone Celular", "Telefone"),
     );
     employee.linkZoom = getText(get(source, "Link ZOOM", "Zoom Link"));
 

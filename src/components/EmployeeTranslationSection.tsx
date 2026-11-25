@@ -46,14 +46,14 @@ export function EmployeeTranslationSection({ employee }: EmployeeTranslationSect
 
   return (
     <>
-      <section className="space-y-4 rounded-[24px] border border-white bg-white/95 p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
+      <section className="flex h-full min-w-0 flex-col space-y-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="flex items-center gap-2 text-xs font-bold text-oxford">
             <span className="h-4 w-1 rounded-full bg-jordy" />
             <Languages className="h-4 w-4 text-yinmn" />
             Habilitações de Tradução
           </h3>
-          <button type="button" onClick={() => setManaging(true)} className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-3.5 py-2 text-[11px] font-bold text-yinmn transition hover:bg-sky-100">
+          <button type="button" onClick={() => setManaging(true)} className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-sky-50 px-3 text-[11px] font-bold text-yinmn transition hover:bg-sky-100">
             <Pencil className="h-3.5 w-3.5" /> Editar Habilitações
           </button>
         </div>
@@ -71,11 +71,11 @@ export function EmployeeTranslationSection({ employee }: EmployeeTranslationSect
             Nenhuma habilitação de tradução cadastrada.
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid flex-1 gap-3 sm:grid-cols-2">
             {[...capabilities]
               .sort((left, right) => left.languageName.localeCompare(right.languageName, "pt-BR"))
               .map((capability) => (
-                <article key={capability.id} className="rounded-2xl border border-transparent bg-slate-50 p-4 transition-colors hover:border-sky-200 hover:bg-white">
+                <article key={capability.id} className="min-h-28 rounded-xl border border-transparent bg-slate-50 p-3.5 transition-colors hover:border-sky-200 hover:bg-white">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <strong className="text-sm text-oxford">{capability.languageName}</strong>
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${capability.active ? "bg-emerald-50 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>

@@ -114,6 +114,20 @@ export const dataSourcesInfo = {
     "dataSourceType": "Dataverse",
     "apis": {}
   },
+  "imtcbra_rhteachingmodalitieses": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "imtcbra_rhteachingmodalitiesid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
+  "imtcbra_rhteachingqualificationses": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "imtcbra_rhteachingqualificationsid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
   "imtcbra_rhtranslationcapabilitieses": {
     "tableId": "",
     "version": "",

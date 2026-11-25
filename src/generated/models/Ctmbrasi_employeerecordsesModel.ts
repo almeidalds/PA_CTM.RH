@@ -47,6 +47,7 @@ export interface Ctmbrasi_employeerecordsesBase {
   ctmbrasi_terminationdate?: string;
   "ctmbrasi_Zone@odata.bind"?: string;
   ctmbrasi_zoomlink?: string;
+  imtcbra_telefone?: string;
   importsequencenumber?: number;
   overriddencreatedon?: string;
   statecode: Ctmbrasi_employeerecordsesstatecode;

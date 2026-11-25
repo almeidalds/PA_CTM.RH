@@ -121,7 +121,7 @@ export function obterContratos(employees: RhEmployee[]): ContractRenewal[] {
       
       // Determinar o status de renovação inicial com base nos dias restantes se não houver no perfil
       let status: ContractRenewalStatus = "Não iniciado";
-      let responsavel = "RH Pendente";
+      const responsavel = "";
       let recomendacao = "Avaliar desempenho Funcionário.";
       
       if (!emp.dataTerminoReal) {
@@ -130,15 +130,12 @@ export function obterContratos(employees: RhEmployee[]): ContractRenewal[] {
       } else if (dias !== null) {
         if (dias <= 15) {
           status = "Urgente";
-          responsavel = "Robson (Gerente)";
           recomendacao = "Crítico: Renovação extremamente urgente para garantir as turmas do instrutor.";
         } else if (dias <= 30) {
           status = "Em análise";
-          responsavel = "Letícia (Analista)";
           recomendacao = "Alta prioridade: Realizar levantamento de qualidade e frequência do instrutor.";
         } else if (dias <= 60) {
           status = "Em análise";
-          responsavel = "Letícia (Analista)";
           recomendacao = "Prioridade média: Contrato expira em breve, planejar substituição preventiva caso não renove.";
         } else if (dias <= 90) {
           status = "Não iniciado";
@@ -166,6 +163,7 @@ export function obterContratos(employees: RhEmployee[]): ContractRenewal[] {
 
       return {
         recordId: emp.recordId,
+        renewalRecordId: emp.renovacaoContratoId,
         nome: emp.nome,
         cargo: emp.cargo,
         zona: emp.zona,
@@ -175,6 +173,7 @@ export function obterContratos(employees: RhEmployee[]): ContractRenewal[] {
         diasRestantes: dias,
         statusRenovacao,
         responsavelAnalise,
+        responsavelAnaliseId: emp.responsavelAnaliseId,
         dataLimiteDecisao,
         recomendacao: recomendacaoContrato,
         observacoes: observacoesContrato

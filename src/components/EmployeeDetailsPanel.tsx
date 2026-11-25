@@ -4,11 +4,12 @@
  */
 
 import React, { useState, useEffect, useRef } from "react";
-import { getContext } from "@microsoft/power-apps/app";
+import { getCurrentUserDisplayName } from "../services/currentUser";
 import {
   X,
   Camera,
   Mail,
+  Phone,
   Copy,
   Check,
   Video,
@@ -50,6 +51,7 @@ import FuncionarioAvatar, {
 } from "./FuncionarioAvatar";
 import { PendingEditorPanel } from "./PendingEditorPanel";
 import { EmployeeTranslationSection } from "./EmployeeTranslationSection";
+import { EmployeeTeachingSection } from "./EmployeeTeachingSection";
 
 const EMPLOYEE_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/bmp"]);
 
@@ -117,13 +119,7 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
 
     const carregarResponsavel = async () => {
       try {
-        const contexto = await getContext();
-        const nome = contexto.user.fullName?.trim()
-          || contexto.user.userPrincipalName?.trim();
-
-        if (!nome) {
-          throw new Error("O contexto do Power Apps não informou o usuário autenticado.");
-        }
+        const nome = await getCurrentUserDisplayName();
 
         if (componenteAtivo) setResponsavelAtual(nome);
       } catch (erro) {
@@ -342,7 +338,7 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
       />
 
       <section
-        className="relative z-10 flex max-h-[95dvh] w-full max-w-6xl flex-col overflow-hidden rounded-[24px] border border-white bg-slate-50 shadow-[0_28px_80px_rgba(0,48,87,0.24)] sm:max-h-[92dvh] sm:rounded-[34px]"
+        className="relative z-10 flex max-h-[96dvh] w-full max-w-[1280px] flex-col overflow-hidden rounded-[22px] border border-white bg-slate-50 shadow-[0_28px_80px_rgba(0,48,87,0.24)] sm:max-h-[94dvh] sm:rounded-[30px]"
         aria-labelledby={isEditing ? "editor-panel-title" : "employee-details-title"}
         role="dialog"
         aria-modal="true"
@@ -359,7 +355,7 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
         ) : (
           <>
         {/* Header */}
-        <div className="relative shrink-0 overflow-hidden border-b border-slate-200 bg-white px-4 py-5 sm:px-7 sm:py-6">
+        <div className="relative shrink-0 overflow-hidden border-b border-slate-200 bg-white px-4 py-4 sm:px-6 sm:py-5 lg:px-7">
           <div aria-hidden="true" className="absolute -right-12 -top-24 h-52 w-[28rem] rounded-full bg-gradient-to-br from-sky-200/45 via-sky-50 to-transparent" />
           <button
             type="button"
@@ -370,9 +366,9 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
             <X className="h-4 w-4" />
           </button>
 
-          <div className="relative z-10 grid items-center gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(340px,430px)]">
-            <div className="flex min-w-0 items-center gap-4 pr-10">
-              <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
+          <div className="relative z-10 grid items-center gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
+            <div className="flex min-w-0 items-center gap-3 pr-10 sm:gap-4">
+              <div className="relative h-20 w-20 shrink-0 sm:h-24 sm:w-24 lg:h-28 lg:w-28">
                 <FuncionarioAvatar
                   key={`${employee.recordId}-${photoVersion}`}
                   funcionarioId={employee.recordId}
@@ -432,8 +428,8 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
             </div>
 
             <div className="hidden grid-cols-2 gap-3 pr-10 lg:grid">
-              <div className="rounded-[20px] bg-sky-50 p-4">
-                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-yinmn shadow-sm">
+              <div className="min-h-28 rounded-2xl bg-sky-50 p-4">
+                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-yinmn shadow-sm">
                   <Calendar className="h-4 w-4" />
                 </div>
                 <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">Prazo contratual</span>
@@ -442,8 +438,8 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
                 </strong>
               </div>
 
-              <div className="rounded-[20px] bg-sky-100/60 p-4">
-                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-yinmn shadow-sm">
+              <div className="min-h-28 rounded-2xl bg-sky-100/60 p-4">
+                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-white text-yinmn shadow-sm">
                   <Plane className="h-4 w-4" />
                 </div>
                 <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">Situação de férias</span>
@@ -454,17 +450,17 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 space-y-5 overflow-y-auto bg-slate-50 p-4 sm:p-5 lg:p-6">
-          <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2 lg:gap-5">
+        <div className="flex-1 space-y-4 overflow-y-auto bg-slate-50 p-3 sm:p-4 lg:p-5">
+          <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
 
           {/* Dados do Cargo e Turno */}
-          <div className="space-y-4 rounded-[24px] border border-white bg-white/95 p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
+          <div className="flex h-full min-w-0 flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
             <h3 className="flex items-center gap-2 text-xs font-bold text-oxford">
               <span className="h-4 w-1 rounded-full bg-jordy" />
               Informações profissionais
             </h3>
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-              <div className="rounded-2xl border border-transparent bg-slate-50 p-4 transition-colors hover:border-sky-200 hover:bg-white">
+              <div className="flex min-h-20 min-w-0 flex-col justify-center rounded-xl border border-transparent bg-slate-50 p-3.5 transition-colors hover:border-sky-200 hover:bg-white">
                 <div className="mb-1.5 flex items-center gap-1.5 text-yinmn">
                   <BriefcaseBusiness className="w-3.5 h-3.5" />
                   <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Cargo</span>
@@ -474,7 +470,7 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-transparent bg-slate-50 p-4 transition-colors hover:border-sky-200 hover:bg-white">
+              <div className="flex min-h-20 min-w-0 flex-col justify-center rounded-xl border border-transparent bg-slate-50 p-3.5 transition-colors hover:border-sky-200 hover:bg-white">
                 <div className="mb-1.5 flex items-center gap-1.5 text-yinmn">
                   <Clock className="w-3.5 h-3.5" />
                   <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Turno</span>
@@ -484,7 +480,7 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-transparent bg-slate-50 p-4 transition-colors hover:border-sky-200 hover:bg-white">
+              <div className="flex min-h-20 min-w-0 flex-col justify-center rounded-xl border border-transparent bg-slate-50 p-3.5 transition-colors hover:border-sky-200 hover:bg-white">
                 <div className="mb-1.5 flex items-center gap-1.5 text-yinmn">
                   <MapPin className="w-3.5 h-3.5" />
                   <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Zona</span>
@@ -494,7 +490,7 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-transparent bg-slate-50 p-4 transition-colors hover:border-sky-200 hover:bg-white">
+              <div className="flex min-h-20 min-w-0 flex-col justify-center rounded-xl border border-transparent bg-slate-50 p-3.5 transition-colors hover:border-sky-200 hover:bg-white">
                 <div className="mb-1.5 flex items-center gap-1.5 text-yinmn">
                   <Globe2 className="w-3.5 h-3.5" />
                   <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Idiomas</span>
@@ -506,16 +502,16 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
             </div>
           </div>
 
-          <div className="space-y-4 rounded-[24px] border border-white bg-white/95 p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
+          <div className="flex h-full min-w-0 flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
             <h3 className="flex items-center gap-2 text-xs font-bold text-oxford">
               <span className="h-4 w-1 rounded-full bg-jordy" />
               Dados adicionais
             </h3>
-            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid flex-1 grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
               {additionalDetails.map((detail) => (
                 <div
                   key={detail.label}
-                  className="flex min-h-[78px] min-w-0 flex-col justify-between rounded-2xl border border-transparent bg-slate-50 p-4 transition-colors hover:border-sky-200 hover:bg-white"
+                  className="flex min-h-20 min-w-0 flex-col justify-center rounded-xl border border-transparent bg-slate-50 p-3.5 transition-colors hover:border-sky-200 hover:bg-white"
                 >
                   <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
                     {detail.label}
@@ -529,7 +525,7 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
           </div>
 
           {/* Datas de Contrato */}
-          <div className="space-y-4 rounded-[24px] border border-white bg-white/95 p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
+          <div className="flex h-full min-w-0 flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
             <h3 className="flex items-center gap-2 text-xs font-bold text-oxford">
               <span className="h-4 w-1 rounded-full bg-jordy" />
               Informações contratuais
@@ -591,7 +587,7 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
           </div>
 
           {/* Ferias e ausencias */}
-          <div className="space-y-4 rounded-[24px] border border-white bg-white/95 p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
+          <div className="flex h-full min-w-0 flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
             <div className="flex items-center justify-between gap-3">
               <h3 className="flex items-center gap-2 text-xs font-bold text-oxford">
                 <span className="h-4 w-1 rounded-full bg-jordy" />
@@ -600,7 +596,7 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
               <button
                 type="button"
                 onClick={() => onConfigureVacation(employee)}
-                className="inline-flex items-center gap-1.5 rounded-full border border-transparent bg-sky-50 px-3.5 py-2 text-[11px] font-bold text-yinmn transition hover:bg-sky-100"
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-transparent bg-sky-50 px-3 text-[11px] font-bold text-yinmn transition hover:bg-sky-100"
               >
                 <FileEdit className="h-3.5 w-3.5" />
                 {"Configurar f\u00e9rias"}
@@ -652,22 +648,22 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
           </div>
 
           {/* Contatos Corporativos */}
-          <div className="space-y-4 rounded-[24px] border border-white bg-white/95 p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5 lg:col-span-2">
+          <div className="space-y-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5 lg:col-span-2">
             <h3 className="flex items-center gap-2 text-xs font-bold text-oxford">
               <span className="h-4 w-1 rounded-full bg-jordy" />
               Contatos
             </h3>
             
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.25fr_1.5fr_1fr]">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
               {/* E-mail */}
-              <div className="flex min-w-0 items-center justify-between rounded-2xl border border-transparent bg-slate-50 p-4 transition-colors hover:border-sky-200 hover:bg-white">
-                <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex min-h-24 min-w-0 items-center justify-between rounded-xl border border-transparent bg-slate-50 p-3.5 transition-colors hover:border-sky-200 hover:bg-white">
+                <div className="flex min-w-0 items-center gap-2.5">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-yinmn">
                     <Mail className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
                     <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">E-mail corporativo</span>
-                    <p className="truncate text-sm font-semibold text-oxford">
+                    <p className="mt-1 break-all text-sm font-semibold leading-snug text-oxford">
                       {employee.emailCorporativo || "Não cadastrado"}
                     </p>
                   </div>
@@ -685,34 +681,61 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
                 )}
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {[
-                  { label: "E-mail BYU", value: employee.emailBYU },
-                  { label: "E-mail pessoal", value: employee.emailPessoal },
-                ].map((contact) => (
-                  <div
-                    key={contact.label}
-                    className="flex min-w-0 flex-col justify-center rounded-2xl border border-transparent bg-slate-50 p-4 transition-colors hover:border-sky-200 hover:bg-white"
-                  >
+              {[
+                { label: "E-mail BYU", value: employee.emailBYU },
+                { label: "E-mail pessoal", value: employee.emailPessoal },
+              ].map((contact) => (
+                <div
+                  key={contact.label}
+                  className="flex min-h-24 min-w-0 items-center gap-2.5 rounded-xl border border-transparent bg-slate-50 p-3.5 transition-colors hover:border-sky-200 hover:bg-white"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-yinmn">
+                    <Mail className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0">
                     <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">
                       {contact.label}
                     </span>
-                    <p className="mt-1 break-all text-sm font-semibold text-oxford">
+                    <p className="mt-1 break-all text-sm font-semibold leading-snug text-oxford">
                       {contact.value || "Não cadastrado"}
                     </p>
                   </div>
-                ))}
+                </div>
+              ))}
+
+              {/* Telefone */}
+              <div className="flex min-h-24 min-w-0 items-center gap-2.5 rounded-xl border border-transparent bg-slate-50 p-3.5 transition-colors hover:border-sky-200 hover:bg-white">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-yinmn">
+                  <Phone className="h-4 w-4" />
+                </span>
+                <div className="min-w-0">
+                  <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                    Telefone celular
+                  </span>
+                  {employee.telefone ? (
+                    <a
+                      href={`tel:${employee.telefone.replace(/[^\d+]/g, "")}`}
+                      className="mt-1 block break-all text-sm font-semibold leading-snug text-oxford hover:text-yinmn"
+                    >
+                      {employee.telefone}
+                    </a>
+                  ) : (
+                    <p className="mt-1 text-sm font-semibold leading-snug text-oxford">
+                      Não cadastrado
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Zoom Link */}
-              <div className="flex min-w-0 items-center justify-between rounded-2xl border border-transparent bg-slate-50 p-4 transition-colors hover:border-sky-200 hover:bg-white">
-                <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex min-h-24 min-w-0 items-center justify-between rounded-xl border border-transparent bg-slate-50 p-3.5 transition-colors hover:border-sky-200 hover:bg-white">
+                <div className="flex min-w-0 items-center gap-2.5">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-yinmn">
                     <Video className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
                     <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500">Sala do Zoom</span>
-                    <p className="truncate text-sm font-semibold text-oxford">
+                    <p className="mt-1 truncate text-sm font-semibold text-oxford">
                       {employee.linkZoom || "Não cadastrado"}
                     </p>
                   </div>
@@ -737,11 +760,14 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
 
           </div>
 
-          <EmployeeTranslationSection employee={employee} />
+          <div className="grid items-stretch gap-4 xl:grid-cols-2">
+            <EmployeeTranslationSection employee={employee} />
+            <EmployeeTeachingSection employee={employee} />
+          </div>
 
           {/* Pendências identificadas */}
           {pendencias.length > 0 && (
-            <div className="space-y-2.5 rounded-[24px] border border-amber-200/70 bg-amber-50/80 p-4 sm:px-5">
+            <div className="space-y-2.5 rounded-2xl border border-amber-200/70 bg-amber-50/80 p-4 sm:px-5">
               <div className="flex items-center gap-2 text-amber-700">
                 <AlertTriangle className="h-4 w-4" />
                 <h4 className="text-xs font-bold">Pendências cadastrais ({pendencias.length})</h4>
@@ -758,7 +784,7 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
           )}
 
           {/* Seção Linha do Tempo */}
-          <div className="space-y-4 rounded-[24px] border border-white bg-white/95 p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
+          <div className="space-y-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_8px_24px_rgba(0,48,87,0.045)] sm:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="flex items-center gap-2 text-xs font-bold text-oxford">
                 <span className="h-4 w-1 rounded-full bg-jordy" />
@@ -770,7 +796,7 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full rounded-full border border-transparent bg-slate-50 px-4 py-2 text-[11px] font-semibold text-slate-600 focus:outline-none sm:w-auto"
+                className="min-h-10 w-full rounded-xl border border-transparent bg-slate-50 px-3 py-2 text-[11px] font-semibold text-slate-600 focus:outline-none sm:w-auto"
               >
                 <option value="all">Todas as categorias</option>
                 <option value="Cadastro">Cadastro</option>
@@ -965,14 +991,14 @@ export const EmployeeDetailsPanel: React.FC<EmployeeDetailsPanelProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-2.5 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 hover:text-oxford"
+            className="flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 hover:text-oxford"
           >
             Fechar
           </button>
           <button
             type="button"
             onClick={() => setIsEditing(true)}
-            className="flex items-center justify-center gap-2 rounded-full bg-yinmn px-6 py-2.5 text-xs font-bold text-white shadow-[0_8px_18px_rgba(0,97,132,0.2)] transition-all hover:bg-cadet active:scale-[0.98]"
+            className="flex min-h-10 items-center justify-center gap-2 rounded-xl bg-yinmn px-6 py-2.5 text-xs font-bold text-white shadow-[0_8px_18px_rgba(0,97,132,0.2)] transition-all hover:bg-cadet active:scale-[0.98]"
           >
             <FileEdit className="h-4 w-4" />
             <span>Editar cadastro</span>

@@ -289,7 +289,7 @@ export function TranslationManagementPanel({
                   </p>
                 </div>
                 <button type="button" onClick={startNew} disabled={loading || Boolean(editor)} className="inline-flex items-center gap-2 rounded-xl bg-yinmn px-3 py-2 text-xs font-bold text-white hover:bg-cadet disabled:opacity-50">
-                  <Plus className="h-4 w-4" /> Nova Habilitação
+                  <Plus className="h-4 w-4" /> Tradução
                 </button>
               </header>
 

@@ -305,9 +305,12 @@ export async function carregarFuncionarios(): Promise<
           item.ctmbrasi_vacationstatus !== 583150005
       );
 
-      const contrato = renovacoes.find(
+      const renovacoesFuncionario = renovacoes.filter(
         (item) => item._ctmbrasi_employee_value === id
       );
+      const contrato =
+        renovacoesFuncionario.find((item) => item.statecode === 0) ||
+        renovacoesFuncionario[0];
 
       const diasVendidos = periodosAtivos.reduce(
         (total, item) => total + (item.ctmbrasi_dayssold || 0),
@@ -392,6 +395,9 @@ export async function carregarFuncionarios(): Promise<
         emailPessoal:
           funcionario.ctmbrasi_personalemail || "",
 
+        telefone:
+          funcionario.imtcbra_telefone || "",
+
         statusDataverse: contratoVencido
           ? 583150004
           : funcionario.ctmbrasi_employeestatus,
@@ -449,6 +455,9 @@ export async function carregarFuncionarios(): Promise<
 
         periodosFerias: periodos,
 
+        renovacaoContratoId:
+          contrato?.ctmbrasi_rhcontractrenewalsid,
+
         statusRenovacao: contrato
           ? statusRenovacao[
               contrato.ctmbrasi_renewalstatus || 0
@@ -457,6 +466,9 @@ export async function carregarFuncionarios(): Promise<
 
         responsavelAnalise:
           contrato?.ctmbrasi_responsiblename || "",
+
+        responsavelAnaliseId:
+          contrato?._ctmbrasi_responsible_value || "",
 
         dataLimiteDecisao:
           formatarData(contrato?.ctmbrasi_decisiondeadline),
@@ -766,6 +778,10 @@ export async function salvarEdicaoFuncionario(
   if (novo.emailPessoal !== anterior.emailPessoal) {
     campos.ctmbrasi_personalemail =
       novo.emailPessoal ?? "";
+  }
+
+  if (novo.telefone !== anterior.telefone) {
+    campos.imtcbra_telefone = novo.telefone ?? "";
   }
 
   if (
@@ -1267,6 +1283,10 @@ async function criarFuncionarioNoDataverse(
   if (dados.emailPessoal?.trim()) {
     novoFuncionario.ctmbrasi_personalemail =
       dados.emailPessoal.trim();
+  }
+
+  if (dados.telefone?.trim()) {
+    novoFuncionario.imtcbra_telefone = dados.telefone.trim();
   }
 
   if (dados.templo !== undefined) {

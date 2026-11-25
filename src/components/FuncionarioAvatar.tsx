@@ -67,6 +67,34 @@ function identificarTipoImagem(bytes: Uint8Array): string {
   return "application/octet-stream";
 }
 
+function converterBytesParaDataUrl(bytes: Uint8Array, tipo: string): string {
+  const partes: string[] = [];
+  const tamanhoParte = 8192;
+  for (let inicio = 0; inicio < bytes.length; inicio += tamanhoParte) {
+    const parte = bytes.subarray(inicio, Math.min(inicio + tamanhoParte, bytes.length));
+    partes.push(String.fromCharCode(...parte));
+  }
+  return `data:${tipo};base64,${window.btoa(partes.join(""))}`;
+}
+
+async function carregarMiniaturaPeloRegistro(
+  funcionarioId: string,
+): Promise<FotoFuncionario | null> {
+  const resultado = await Ctmbrasi_employeerecordsesService.get(funcionarioId, {
+    select: [EMPLOYEE_PHOTO_COLUMN],
+  });
+  if (!resultado.success || !resultado.data) return null;
+
+  const dados = resultado.data[EMPLOYEE_PHOTO_COLUMN] as unknown;
+  if (!dados) return null;
+  const bytes = dados instanceof Blob
+    ? new Uint8Array(await dados.arrayBuffer())
+    : converterImagemParaBytes(dados);
+  return bytes.byteLength
+    ? { bytes, tipo: identificarTipoImagem(bytes) }
+    : null;
+}
+
 function carregarFotoFuncionario(
   funcionarioId: string,
   tamanhoCompleto: boolean
@@ -80,15 +108,17 @@ function carregarFotoFuncionario(
       funcionarioId,
       EMPLOYEE_PHOTO_COLUMN,
       tamanhoCompleto
-    );
+    ).catch(() => null);
 
     // Algumas colunas de imagem guardam somente a miniatura. Nesses casos,
     // o Dataverse responde sem conteúdo quando size=full é solicitado.
-    if ((!resultado.success || !resultado.data) && tamanhoCompleto) {
+    if ((!resultado?.success || !resultado.data) && tamanhoCompleto) {
       return carregarFotoFuncionario(funcionarioId, false);
     }
-    if (!resultado.success) {
-      throw resultado.error || new Error("Imagem não encontrada");
+    if (!resultado?.success || !resultado.data) {
+      // Alguns hosts do Power Apps não entregam o endpoint binário $value.
+      // A leitura explícita da coluna retorna a miniatura em Base64.
+      return carregarMiniaturaPeloRegistro(funcionarioId);
     }
 
     const dadosRecebidos = resultado.data as unknown;
@@ -97,8 +127,7 @@ function carregarFotoFuncionario(
       : converterImagemParaBytes(dadosRecebidos);
     if (!bytes.byteLength) {
       if (tamanhoCompleto) return carregarFotoFuncionario(funcionarioId, false);
-      fotoCache.delete(chaveCache);
-      return null;
+      return carregarMiniaturaPeloRegistro(funcionarioId);
     }
 
     return { bytes, tipo: identificarTipoImagem(bytes) };
@@ -142,7 +171,6 @@ export default function FuncionarioAvatar({
 }: FuncionarioAvatarProps) {
   const [fotoUrl, setFotoUrl] = useState<string | null>(null);
   const [fotoVersion, setFotoVersion] = useState(0);
-  const temFotoNoDataverse = Boolean(fotoRelativa) || fotoTimestamp != null;
 
   useEffect(() => {
     const handleFotoAtualizada = (event: Event) => {
@@ -157,13 +185,14 @@ export default function FuncionarioAvatar({
 
   useEffect(() => {
     let cancelado = false;
-    let enderecoFoto: string | null = null;
 
     setFotoUrl(null);
     if (!funcionarioId) return;
 
-    const chaveCache = `${funcionarioId}:${size === "detail" ? "completa" : "miniatura"}`;
-    if (!temFotoNoDataverse && !fotoCache.has(chaveCache)) return;
+    if (fotoRelativa?.startsWith("data:")) {
+      setFotoUrl(fotoRelativa);
+      return;
+    }
 
     const carregar = async () => {
       try {
@@ -173,16 +202,10 @@ export default function FuncionarioAvatar({
         );
         if (!foto) return;
 
-        const buffer = new ArrayBuffer(foto.bytes.byteLength);
-        new Uint8Array(buffer).set(foto.bytes);
-        const blob = new Blob([buffer], { type: foto.tipo });
-        const url = URL.createObjectURL(blob);
-        if (cancelado) {
-          URL.revokeObjectURL(url);
-        } else {
-          enderecoFoto = url;
-          setFotoUrl(url);
-        }
+        // O contêiner do Power Apps pode bloquear URLs blob:. Data URLs usam
+        // o mesmo formato já aceito para a fotografia do usuário no cabeçalho.
+        const url = converterBytesParaDataUrl(foto.bytes, foto.tipo);
+        if (!cancelado) setFotoUrl(url);
       } catch (erro) {
         console.error("Erro ao carregar fotografia:", erro);
         if (!cancelado) setFotoUrl(null);
@@ -193,9 +216,11 @@ export default function FuncionarioAvatar({
 
     return () => {
       cancelado = true;
-      if (enderecoFoto) URL.revokeObjectURL(enderecoFoto);
     };
-  }, [funcionarioId, size, fotoVersion, temFotoNoDataverse]);
+    // Os campos virtuais *_url e *_timestamp nem sempre são materializados
+    // pelo runtime do Power Apps. Eles continuam na dependência para refazer a
+    // leitura quando mudarem, mas nunca devem impedir o download da imagem.
+  }, [funcionarioId, size, fotoVersion, fotoRelativa, fotoTimestamp]);
 
   const iniciais = nome
     .trim()
@@ -207,7 +232,7 @@ export default function FuncionarioAvatar({
   return (
     <div
       className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-sky-800 text-white ${
-        size === "card" ? "h-16 w-16" : "h-24 w-24 sm:h-28 sm:w-28"
+        size === "card" ? "h-16 w-16" : "h-20 w-20 sm:h-24 sm:w-24 lg:h-28 lg:w-28"
       }`}
     >
       {fotoUrl ? (

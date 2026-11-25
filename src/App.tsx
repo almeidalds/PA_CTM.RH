@@ -26,6 +26,7 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { AlertsPage } from "./pages/AlertsPage";
 import { FutureHiresPage } from "./pages/FutureHiresPage";
 import { TranslationsPage } from "./pages/TranslationsPage";
+import { TeachingPage } from "./pages/TeachingPage";
 
 import { SectionTabs } from "./components/SectionTabs";
 import { EmployeeDetailsPanel } from "./components/EmployeeDetailsPanel";
@@ -54,6 +55,10 @@ import {
   salvarTurnosDataverse,
   type TurnoItem,
 } from "./services/dataverseCatalogs";
+import {
+  saveContractRenewal,
+  type ContractRenewalInput,
+} from "./services/contractRenewalsDataSource";
 
 import { calcularQualidadeDados } from "./utils/dataQualityUtils";
 import { calcularRisco } from "./utils/riskUtils";
@@ -399,6 +404,21 @@ export default function App() {
     }
   };
 
+  const handleSaveContractRenewal = async (
+    input: ContractRenewalInput,
+  ): Promise<void> => {
+    try {
+      const updatedEmployees = await saveContractRenewal(input);
+      setEmployees(updatedEmployees);
+      setMutationError("");
+      setMutationWarning(false);
+    } catch (error) {
+      setMutationError(error instanceof Error ? error.message : String(error));
+      setMutationWarning(false);
+      throw error;
+    }
+  };
+
   // ========================================
   // INDICADORES
   // ========================================
@@ -428,6 +448,7 @@ export default function App() {
     team: "Funcionários e Cadastros",
     futureHires: "Contratações Futuras",
     translations: "Traduções",
+    teaching: "Distritos",
     schedule: "Escalas e ausências",
     risks: "Riscos e contratos",
     settings: "Configurações",
@@ -811,13 +832,7 @@ export default function App() {
                         setSelectedEmployee
                       }
 
-                      onUpdateEmployee={(employee) => {
-                        void handleSaveEmployee(
-                          employee
-                        ).catch(() => {
-                          // Mensagem exibida acima.
-                        });
-                      }}
+                      onSaveRenewal={handleSaveContractRenewal}
                     />
                   )}
 
@@ -854,6 +869,13 @@ export default function App() {
 
               {activeTab === "translations" && (
                 <TranslationsPage
+                  employees={employees}
+                  onSelectEmployee={setSelectedEmployee}
+                />
+              )}
+
+              {activeTab === "teaching" && (
+                <TeachingPage
                   employees={employees}
                   onSelectEmployee={setSelectedEmployee}
                 />

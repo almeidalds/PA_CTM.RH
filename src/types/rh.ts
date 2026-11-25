@@ -33,6 +33,7 @@ export type RhEmployee = {
   fotoTimestamp?: number;
   emailBYU?: string;
   emailPessoal?: string;
+  telefone?: string;
   statusDataverse?: Ctmbrasi_employeerecordsesctmbrasi_employeestatus;
   statusRegistro?: Ctmbrasi_employeerecordsesstatecode;
   templo?: boolean;
@@ -48,8 +49,10 @@ export type RhEmployee = {
   periodosFerias: VacationPeriod[];
 
   // Optional fields for contract renewal metadata (usually stored in a separate table/entity)
+  renovacaoContratoId?: string;
   statusRenovacao?: import("./rh").ContractRenewalStatus;
   responsavelAnalise?: string;
+  responsavelAnaliseId?: string;
   dataLimiteDecisao?: string;
   recomendacaoContrato?: string;
   observacoesContrato?: string;
@@ -152,6 +155,7 @@ export type ContractRenewalStatus =
 
 export type ContractRenewal = {
   recordId: string; // Matches employee.recordId
+  renewalRecordId?: string;
   nome: string;
   cargo: string;
   zona: string;
@@ -161,6 +165,7 @@ export type ContractRenewal = {
   diasRestantes: number | null;
   statusRenovacao: ContractRenewalStatus;
   responsavelAnalise: string;
+  responsavelAnaliseId?: string;
   dataLimiteDecisao: string;
   recomendacao: string;
   observacoes: string;
